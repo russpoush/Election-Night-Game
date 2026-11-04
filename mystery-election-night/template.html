@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mystery Election Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a replayed election-night broadcast. Sticky bar with clock, score and race to 270; tile map of the states; a detail panel for the tapped state; a presidency call panel. Single dark studio theme by choice. */
+:root{
+  --bg:#0b0f17; --panel:#141a26; --line:#252e40; --text:#e9edf5; --muted:#8b95a9;
+  --org:#ff8a3d; --pur:#a57cff; --call:#ffd23f; --good:#3ddc97; --bad:#ff5a5f;
+  --display:"Barlow Condensed", "Arial Narrow", sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,rect:focus-visible{outline:2px solid var(--call);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:640px;margin:0 auto;padding:12px 14px 40px;display:grid;gap:12px}
+
+.bar{position:sticky;top:0;z-index:5;background:rgba(11,15,23,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.bar-in{max-width:640px;margin:0 auto;padding:10px 14px 8px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center}
+.logo{font-family:var(--display);font-weight:800;font-size:19px;line-height:1.05;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.live{font-size:11px;font-family:var(--body);font-weight:600;letter-spacing:.08em;padding:2px 6px;border-radius:3px;background:var(--line);color:var(--muted)}
+.live.on{background:var(--bad);color:#fff}
+.score{font-family:var(--display);font-weight:700;font-size:22px;text-align:right}
+.score small{display:block;font-family:var(--body);font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.clock{font-family:var(--display);font-size:20px;font-weight:600}
+.clock small{font-family:var(--body);font-size:11px;color:var(--muted);font-weight:500}
+.controls{display:flex;gap:6px;justify-content:flex-end}
+.controls button{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:13px;font-weight:600}
+.controls button.sel{border-color:var(--call);color:var(--call)}
+.race270{grid-column:1/-1;display:grid;gap:4px}
+.evrow{display:flex;justify-content:space-between;font-family:var(--display);font-weight:700;font-size:17px}
+.evrow .o{color:var(--org)} .evrow .p{color:var(--pur)}
+.evrow .mid{font-family:var(--body);font-size:11px;font-weight:500;color:var(--muted);align-self:center;text-transform:uppercase;letter-spacing:.06em}
+.evbar{height:10px;border-radius:5px;background:var(--line);position:relative;overflow:hidden}
+.evbar .bo{position:absolute;left:0;top:0;bottom:0;background:var(--org)}
+.evbar .bp{position:absolute;right:0;top:0;bottom:0;background:var(--pur)}
+.evbar .half{position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--text);opacity:.6}
+.rivalline{font-size:12px;color:var(--muted);display:flex;justify-content:space-between}
+.chyron{grid-column:1/-1;font-size:13px;min-height:20px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chyron b{color:var(--call);font-weight:600}
+.timeline{grid-column:1/-1;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.timeline i{display:block;height:100%;background:var(--call);width:0}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.map svg{width:100%;height:auto;display:block}
+.map rect{cursor:pointer}
+.map text{font-family:var(--body);font-size:10px;font-weight:600;pointer-events:none;text-anchor:middle;dominant-baseline:central}
+.legendline{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted);margin-top:8px}
+.sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.title{font-family:var(--display);font-weight:700;font-size:22px;line-height:1.05;text-transform:uppercase;letter-spacing:.02em}
+.title span{display:block;font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:3px}
+.pill{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:4px;background:var(--line);color:var(--muted);white-space:nowrap}
+.pill.counting{background:#2a2410;color:var(--call)}
+.pill.rival{background:#2b1a1d;color:#ff9a9d}
+.pill.done{background:#132a22;color:var(--good)}
+.shares{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px;margin-top:10px}
+.side .pct{font-family:var(--display);font-size:30px;font-weight:700;line-height:1}
+.side .lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.side .v{font-size:12px;color:var(--muted)}
+.side.o .lbl,.side.o .pct{color:var(--org)}
+.side.p{text-align:right}
+.side.p .lbl,.side.p .pct{color:var(--pur)}
+.midc{text-align:center;font-size:12px;color:var(--muted);line-height:1.35}
+.midc b{display:block;color:var(--text);font-family:var(--display);font-size:18px;font-weight:600}
+.facts{font-size:13px;color:var(--muted);line-height:1.55;margin-top:8px}
+.facts b{color:var(--text);font-weight:600}
+.calls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.calls button{border:1.5px solid;background:transparent;border-radius:8px;padding:10px 6px;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.04em;text-transform:uppercase}
+.calls .co{border-color:var(--org);color:var(--org)}
+.calls .cp{border-color:var(--pur);color:var(--pur)}
+.calls.big button{font-size:19px;padding:13px 6px}
+.calls.big .co{background:rgba(255,138,61,.12)} .calls.big .cp{background:rgba(165,124,255,.12)}
+.calls button:disabled{opacity:.3;cursor:default}
+.verdict{font-size:13.5px;line-height:1.45;padding:9px 10px;border-radius:8px;background:#0f141e;border:1px solid var(--line);margin-top:10px}
+.verdict b{font-weight:600}
+.empty{color:var(--muted);font-size:14px;line-height:1.5}
+.ptitle{font-family:var(--display);font-weight:700;font-size:20px;text-transform:uppercase;letter-spacing:.03em}
+.psub{font-size:13px;color:var(--muted);line-height:1.5;margin-top:2px}
+
+.overlay{position:fixed;inset:0;z-index:10;background:rgba(5,8,13,.88);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 14px}
+.overlay[hidden]{display:none}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:520px;width:100%;padding:20px 18px;display:grid;gap:14px}
+.sheet h1,.sheet h2{font-family:var(--display);text-transform:uppercase;margin:0;letter-spacing:.03em;text-wrap:balance}
+.sheet h1{font-size:34px;line-height:1}
+.sheet h2{font-size:26px;line-height:1.05}
+.sheet p,.sheet li{line-height:1.5;margin:0;font-size:14.5px}
+.sheet ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.big{font-family:var(--display);font-size:52px;font-weight:800;line-height:1;color:var(--call)}
+.rank{font-family:var(--display);font-size:22px;font-weight:600;text-transform:uppercase}
+.btns{display:grid;gap:8px}
+.years{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.years button{background:transparent;border:1.5px solid var(--line);border-radius:10px;padding:14px;font-family:var(--display);font-size:28px;font-weight:700}
+.years button:hover{border-color:var(--call)}
+.primary{background:var(--call);color:#141005;border:0;border-radius:10px;padding:13px;font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:10px;padding:11px;font-weight:600}
+.reveal{border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:8px;background:#0f141e}
+.reveal .yr{font-family:var(--display);font-size:46px;font-weight:800;line-height:1}
+.reveal .who{font-size:16px;line-height:1.45}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
+td:last-child{text-align:right;font-weight:600;white-space:nowrap}
+.muted{color:var(--muted)}
+.g{color:var(--good)} .r{color:var(--bad)} .y{color:var(--call)}
+.co-t{color:var(--org)} .cp-t{color:var(--pur)}
+.sw{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:6px;vertical-align:-1px;flex:none}
+.map rect.gone{fill:none;stroke:#252e40;stroke-dasharray:2 2;cursor:default}
+.map text.gone{fill:#3a4357}
+.vote{display:grid;gap:6px;margin-top:10px}
+.vrow{display:grid;grid-template-columns:auto 4.5em 1fr 3.6em 3.6em;align-items:center;gap:8px;font-size:13px}
+.vn{font-weight:600}
+.vbar{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.vbar i{display:block;height:100%}
+.vp{text-align:right;font-weight:600}
+.vv{text-align:right;color:var(--muted)}
+.calls button{border:1.5px solid;background:transparent}
+#evrow{display:flex;flex-wrap:wrap;gap:4px 12px;font-family:var(--display);font-weight:700;font-size:16px}
+#evrow .mid{margin-left:auto;font-family:var(--body);font-size:11px;font-weight:500;color:var(--muted);align-self:center;text-transform:uppercase;letter-spacing:.06em}
+#evbar{height:10px;border-radius:5px;background:var(--line);position:relative;overflow:hidden}
+#evbar i{position:absolute;top:0;bottom:0}
+#evbar .half{position:absolute;top:0;bottom:0;width:2px;background:var(--text);opacity:.7}
+.reveal table td{padding:5px 2px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="logo"><span>Mystery Election Night</span> <span class="live" id="live">Paused</span></div>
+    <div class="score num"><small>Score</small><span id="score">0</span></div>
+    <div class="clock num"><span id="clock">6:50 PM</span> <small>ET</small></div>
+    <div class="controls">
+      <button id="play" type="button">Start</button>
+      <button data-speed="1" class="sel" type="button">1×</button>
+      <button data-speed="2" type="button">2×</button>
+      <button data-speed="4" type="button">4×</button>
+    </div>
+    <div class="race270">
+      <div class="evrow num" id="evrow"></div>
+      <div class="evbar" id="evbar"></div>
+      <div class="rivalline num" id="rival"></div>
+    </div>
+    <div class="timeline"><i id="tl"></i></div>
+    <div class="chyron" id="chyron">Polls close in 10 minutes.</div>
+  </div>
+</div>
+
+<main class="wrap">
+  <section class="panel map">
+    <svg id="map" viewBox="0 0 330 240" role="group" aria-label="Map of the states"></svg>
+    <div class="legendline"><span><i class="sw" style="background:#1f2737;border:1px solid #2c3649"></i>Polls open</span><span><i class="sw" style="background:var(--org);opacity:.45"></i>Leading</span><span><i class="sw" style="background:var(--org);outline:2px solid #fff;outline-offset:-2px"></i>You called it</span><span>Dashed edge = still counting</span><span id="notvoting">Faded = not a state yet, or didn't vote that year</span></div>
+  </section>
+  <section class="panel" id="detail"></section>
+  <section class="panel" id="pres"></section>
+</main>
+
+<div class="overlay" id="intro">
+  <div class="sheet">
+    <h1>Mystery Election Night</h1>
+    <p>You're running the decision desk on a <b>real presidential election night</b>, any year from 1824 to 2024. Every state's final result is real. The catch: you don't know the year, and the candidates are disguised as colors.</p>
+    <ol>
+      <li><b>Tap a state</b> to watch its count and call it. Correct and early pays more. A wrong call costs 50.</li>
+      <li><b>Call the presidency</b> when you're sure: up to 650 points, or minus 600 if you're wrong. It takes an Electoral College majority, and that number changes by era.</li>
+      <li><b>Beat the rival network</b> to a call for a scoop bonus.</li>
+      <li><b>At the end, guess the year</b> for 250 more. Then see who won and who they beat.</li>
+    </ol>
+    <p class="muted">Clues: which states exist, how many electoral votes each has, how many candidates are running, and how the regions lean. Older years can have three, four or five candidates, and some states let the legislature pick the electors. The vote-counting order is simulated; the final results are real.</p>
+    <div class="btns">
+      <button class="primary" id="startDaily" type="button">Play tonight's mystery election</button>
+      <button class="ghost" data-era="all" type="button">Random: any year, 1824–2024</button>
+      <button class="ghost" data-era="old" type="button">Random: 1824–1972</button>
+      <button class="ghost" data-era="new" type="button">Random: 1976–2024</button>
+    </div>
+    <p class="muted" style="font-size:13px">Tonight's mystery election is the same for everyone today, so you can each play and compare.</p>
+  </div>
+</div>
+
+<div class="overlay" id="end" hidden><div class="sheet" id="endSheet"></div></div>
+
+<script>
+const ELECTIONS=__DATA__;
+(function(){
+"use strict";
+function hashStr(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}return h>>>0}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let rng=Math.random;
+const R=(a,b)=>a+(b-a)*rng(), RI=(a,b)=>Math.floor(R(a,b+1));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+const NAMES={AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",DE:"Delaware",DC:"District of Columbia",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",WI:"Wisconsin",WY:"Wyoming"};
+const GRID={AK:[0,0],ME:[10,0],VT:[9,1],NH:[10,1],WA:[0,2],ID:[1,2],MT:[2,2],ND:[3,2],MN:[4,2],IL:[5,2],WI:[6,2],MI:[7,2],NY:[8,2],RI:[9,2],MA:[10,2],OR:[0,3],NV:[1,3],WY:[2,3],SD:[3,3],IA:[4,3],IN:[5,3],OH:[6,3],PA:[7,3],NJ:[8,3],CT:[9,3],CA:[0,4],UT:[1,4],CO:[2,4],NE:[3,4],MO:[4,4],KY:[5,4],WV:[6,4],VA:[7,4],MD:[8,4],DE:[9,4],AZ:[1,5],NM:[2,5],KS:[3,5],AR:[4,5],TN:[5,5],NC:[6,5],SC:[7,5],DC:[8,5],OK:[3,6],LA:[4,6],MS:[5,6],AL:[6,6],GA:[7,6],HI:[0,7],TX:[3,7],FL:[8,7]};
+const CLOSE={GA:0,IN:0,KY:0,SC:0,VT:0,VA:0,NC:30,OH:30,WV:30,AL:60,CT:60,DE:60,DC:60,FL:60,IL:60,ME:60,MD:60,MA:60,MS:60,MO:60,NH:60,NJ:60,OK:60,PA:60,RI:60,TN:60,AR:90,AZ:120,CO:120,KS:120,LA:120,MI:120,MN:120,NE:120,NM:120,NY:120,ND:120,SD:120,TX:120,WI:120,WY:120,IA:180,MT:180,NV:180,UT:180,CA:240,HI:240,ID:240,OR:240,WA:240,AK:360};
+const COLORS=[{n:"Orange",c:"#ff8a3d",ink:"#1a0d02"},{n:"Purple",c:"#a57cff",ink:"#140a2b"},{n:"Teal",c:"#2ec4b6",ink:"#04201d"},{n:"Pink",c:"#ff6b9a",ink:"#2b0612"},{n:"Lime",c:"#a3d94a",ink:"#152203"}];
+const START=-10, END=480, PER_SEC=2.5;
+
+// ---------- set up a night ----------
+let E,states,col,maj,t,running=false,speed=1,last=0,ended=false,selected=null,presCall=null,rivalPresT=null,seenRival=new Set(),yearGuess=null,label="";
+const NS=()=>E.cands.length;
+const sideName=i=>COLORS[col[i]].n, sideColor=i=>COLORS[col[i]].c, sideInk=i=>COLORS[col[i]].ink;
+const sw=i=>`<i class="sw" style="background:${sideColor(i)}"></i>`;
+const nameHTML=i=>`<b style="color:${sideColor(i)}">${sideName(i)}</b>`;
+
+function setup(idx,seed){
+  rng=mulberry32(hashStr(seed));
+  E=ELECTIONS[idx];
+  col=shuffle([0,1,2,3,4]).slice(0,NS());
+  maj=Math.floor(E.size/2)+1;
+  states=E.states.map(row=>{
+    const [a,ev,vals,tot]=row;
+    const leg=tot===null;
+    const votes=vals.map(v=>v[0]), evs=vals.map(v=>v[1]);
+    const total=leg?0:Math.max(tot,votes.reduce((x,y)=>x+y,0));
+    const s={a,name:NAMES[a],ev,leg,votes,evs,total,close:CLOSE[a],call:null};
+    const order=votes.map((v,i)=>i).sort((x,y)=>votes[y]-votes[x]);
+    s.winner=leg?evs.indexOf(Math.max(...evs)):order[0];
+    if(leg){s.margin=100;s.rivalT=s.close;return s}
+    const sh=votes.map(v=>v/total);
+    s.margin=100*(sh[order[0]]-(order.length>1?sh[order[1]]:0));
+    const f=R(.55,.7), A=order[0], B=order.length>1?order[1]:order[0];
+    const kMax=Math.min(sh[A],sh[B])*(1-f)/f*.7;
+    const k=(rng()<.5?1:-1)*Math.min(R(.01,.06),kMax);
+    s.p1=sh.slice(); s.p2=sh.slice();
+    if(A!==B){s.p1[A]+=k;s.p1[B]-=k;s.p2[A]-=k*f/(1-f);s.p2[B]+=k*f/(1-f)}
+    s.f=f;
+    const span=(END-s.close)*R(.7,1.08), big=Math.log10(Math.max(total,1000))-5;
+    s.t1=s.close+R(2,15); s.d1=clamp(span*R(.25,.4)*(.8+big*.3),20,span*.5); s.n1=RI(3,7);
+    s.t2=s.t1+s.d1*R(.5,1.1); s.d2=Math.max(20,s.close+span-s.t2); s.n2=RI(3,6);
+    const am=s.margin; s.rivalT=null;
+    if(am>=15)s.rivalT=s.close+RI(0,3);
+    else if(am>=.5){
+      const thr=clamp(1-am*.07+R(-.03,.06),.25,.97);
+      for(let m=s.close;m<=END;m++){const x=at(s,m);if(x.r>=thr&&x.n>0&&leaderOf(x)===s.winner){s.rivalT=m;break}}
+    }
+    return s;
+  });
+  rivalPresT=null;
+  const times=[...new Set(states.filter(s=>s.rivalT!==null).map(s=>s.rivalT))].sort((a,b)=>a-b);
+  for(const m of times){if(rivalEV(m).some(v=>v>=maj)){rivalPresT=m;break}}
+  t=START;ended=false;selected=null;presCall=null;seenRival=new Set();yearGuess=null;
+}
+function prog(m,s0,d,n){const x=(m-s0)/d;if(x<=0)return 0;if(x>=1)return 1;return Math.ceil(x*n)/n}
+function at(s,m){
+  if(s.leg){const done=m>=s.close;return {v:s.votes.map(()=>0),n:0,oth:0,r:done?1:0}}
+  const a=prog(m,s.t1,s.d1,s.n1),b=prog(m,s.t2,s.d2,s.n2);
+  const v=s.p1.map((p,i)=>s.total*(s.f*a*p+(1-s.f)*b*s.p2[i]));
+  const n=s.total*(s.f*a+(1-s.f)*b);
+  return {v,n,oth:Math.max(0,n-v.reduce((x,y)=>x+y,0)),r:n/s.total};
+}
+function leaderOf(x){let b=0;x.v.forEach((v,i)=>{if(v>x.v[b])b=i});return b}
+function rivalEV(m){const e=E.cands.map(()=>0);states.forEach(s=>{if(s.rivalT!==null&&m>=s.rivalT)s.evs.forEach((v,i)=>e[i]+=v)});return e}
+function myEV(){const e=E.cands.map(()=>0);states.forEach(s=>{if(s.leg&&t>=s.close)s.evs.forEach((v,i)=>e[i]+=v);else if(s.call)e[s.call.party]+=s.ev});return e}
+function nationalR(m){let n=0,T=0;states.forEach(s=>{if(!s.leg){n+=at(s,m).n;T+=s.total}});return T?n/T:1}
+
+// ---------- scoring ----------
+function statePts(s){if(!s.call)return 0;if(s.call.party!==s.winner)return -50;return 20+Math.round(30*(1-s.call.r))+((s.rivalT===null||s.call.t<s.rivalT)?10:0)}
+function presPts(){if(!presCall)return 0;if(presCall.party!==E.winner)return -600;return 300+Math.round(200*(1-presCall.r))+((rivalPresT===null||presCall.t<rivalPresT)?150:0)}
+function stateFinal(s){return ended||at(s,t).r>=.9999}
+function liveScore(){let x=states.filter(stateFinal).reduce((a,s)=>a+statePts(s),0);if(ended)x+=presPts()+(yearGuess===E.year?250:0);return x}
+
+// ---------- formatting ----------
+function fmtTime(m){let mins=Math.round(m)+19*60;mins=((mins%1440)+1440)%1440;let h=Math.floor(mins/60),mm=mins%60;const ap=h>=12?"PM":"AM";h=h%12||12;return h+":"+String(mm).padStart(2,"0")+" "+ap}
+function fmtV(n){if(n>=1e6)return(n/1e6).toFixed(2)+"M";if(n>=1e3)return Math.round(n/1e3)+"K";return String(Math.round(n))}
+const $=id=>document.getElementById(id);
+function setHTML(el,html){if(el.dataset.h!==html){el.dataset.h=html;el.innerHTML=html}}
+
+// ---------- map ----------
+function buildMap(){
+  const inE=new Set(states.map(s=>s.a));
+  let h="";
+  Object.keys(GRID).forEach(a=>{const [x,y]=GRID[a];if(!inE.has(a))h+=`<rect class="gone" x="${x*30+3}" y="${y*30+3}" width="24" height="24" rx="4"></rect><text class="gone" x="${x*30+15}" y="${y*30+15}">${a}</text>`});
+  h+=states.map((s,i)=>{const [x,y]=GRID[s.a];return `<rect data-i="${i}" tabindex="0" aria-label="${s.name}" x="${x*30+1}" y="${y*30+1}" width="28" height="28" rx="4"></rect><text data-l="${i}" x="${x*30+15}" y="${y*30+15}">${s.a}</text>`}).join("");
+  $("map").innerHTML=h;
+  $("notvoting").hidden=inE.size>=51;
+}
+function renderMap(){
+  states.forEach((s,i)=>{
+    const rect=$("map").querySelector(`rect[data-i="${i}"]`),txt=$("map").querySelector(`text[data-l="${i}"]`);
+    const x=at(s,t);
+    let fill="#1f2737",op=1,stroke="#2c3649",w=1,dash="",ink="#6b7489";
+    if(s.leg&&t>=s.close){fill=sideColor(s.winner);op=.85;stroke="#e9edf5";w=1;ink=sideInk(s.winner)}
+    else if(s.call){fill=sideColor(s.call.party);stroke="#ffffff";w=2;ink=sideInk(s.call.party)}
+    else if(t>=s.close&&x.n>0){const L=leaderOf(x),sorted=x.v.slice().sort((a,b)=>b-a),m=(sorted[0]-(sorted[1]||0))/x.n;fill=sideColor(L);op=.22+.5*clamp(m/.3,0,1);stroke=x.r<.999?"#e9edf5":"none";w=x.r<.999?1:0;dash=x.r<.999?"3 2":"";ink="#e9edf5"}
+    else if(t>=s.close){stroke="#e9edf5";dash="3 2";ink="#e9edf5"}
+    if(selected===i){stroke="#ffd23f";w=2.5;dash=""}
+    rect.setAttribute("fill",fill);rect.setAttribute("fill-opacity",op);rect.setAttribute("stroke",stroke);rect.setAttribute("stroke-width",w);rect.setAttribute("stroke-dasharray",dash);
+    txt.setAttribute("fill",ink);
+  });
+}
+
+// ---------- panels ----------
+function renderDetail(){
+  const el=$("detail");
+  if(selected===null){setHTML(el,`<div class="ptitle">Pick a state</div><p class="empty" style="margin:4px 0 0">Tap any state on the map to watch its count and make a call. States light up as their polls close.</p>`);return}
+  const s=states[selected],x=at(s,t),open=t<s.close,fin=stateFinal(s);
+  const rivalCalled=s.rivalT!==null&&t>=s.rivalT;
+  let pill=open?`<span class="pill">Polls open</span>`:s.leg?`<span class="pill done">Decided</span>`:fin?`<span class="pill done">Final</span>`:rivalCalled?`<span class="pill rival">Rival called it</span>`:`<span class="pill counting">Counting</span>`;
+  let html=`<div class="head"><div class="title">${s.name}<span>${s.ev} electoral vote${s.ev===1?"":"s"} · Polls close ${fmtTime(s.close)} ET</span></div>${pill}</div>`;
+  if(s.leg){
+    html+=`<div class="facts">${open?`Results arrive at ${fmtTime(s.close)} ET.`:`No popular vote here: <b>the state legislature chose the electors.</b> Its electoral votes went to ${s.evs.map((v,i)=>v?`${nameHTML(i)} (${v})`:"").filter(Boolean).join(", ")}.`}</div>`;
+    setHTML(el,html);return;
+  }
+  const rows=E.cands.map((c,i)=>{const p=x.n?100*x.v[i]/x.n:0;return `<div class="vrow">${sw(i)}<span class="vn" style="color:${sideColor(i)}">${sideName(i)}</span><span class="vbar"><i style="width:${p}%;background:${sideColor(i)}"></i></span><span class="vp num">${x.n?p.toFixed(1)+"%":"–"}</span><span class="vv num">${fmtV(x.v[i])}</span></div>`}).join("");
+  const oth=x.n?100*x.oth/x.n:0;
+  const sorted=x.v.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
+  const lead=x.n?`${sideName(sorted[0][1])} +${(100*(sorted[0][0]-(sorted[1]?sorted[1][0]:0))/x.n).toFixed(1)}`:"no votes yet";
+  html+=`<div class="vote">${rows}<div class="vrow muted">${`<i class="sw" style="background:#3a4357"></i>`}<span class="vn">Others</span><span class="vbar"><i style="width:${oth}%;background:#3a4357"></i></span><span class="vp num">${x.n?oth.toFixed(1)+"%":"–"}</span><span class="vv num">${fmtV(x.oth)}</span></div></div>
+  <div class="facts">${open?`Votes start coming in after polls close at <b>${fmtTime(s.close)} ET</b>.`:`<b class="num">${Math.round(x.r*100)}%</b> of expected vote in · Leader: <b>${lead}</b> · Votes left: <b class="num">~${fmtV(s.total-x.n)}</b>`}</div>`;
+  if(s.call||fin){
+    let v="";
+    if(s.call)v+=`You called it for ${nameHTML(s.call.party)} at ${fmtTime(s.call.t)} with ${Math.round(s.call.r*100)}% in.`;
+    else v+="You didn't call this state.";
+    if(rivalCalled)v+=` Rival called it at ${fmtTime(s.rivalT)}.`;
+    if(fin){
+      const split=s.evs.filter(e=>e>0).length>1;
+      v+=`<br>Final: ${nameHTML(s.winner)} wins the most votes, by ${s.margin.toFixed(2)} pts.`;
+      if(split)v+=` Electoral votes split: ${s.evs.map((e,i)=>e?`${sideName(i)} ${e}`:"").filter(Boolean).join(", ")}.`;
+      if(s.call){const p=statePts(s);v+=p<0?` <b class="r">Wrong call. ${p} pts.</b>`:` <b class="g">Correct! +${p} pts.</b>`}
+      else if(s.margin<.5)v+=` <b class="y">Razor thin. Smart to stay out.</b>`;
+    }
+    html+=`<div class="verdict">${v}</div>`;
+  }else{
+    const dis=open||ended?"disabled":"";
+    html+=`<div class="calls">${E.cands.map((c,i)=>`<button data-call="${i}" ${dis} type="button" style="border-color:${sideColor(i)};color:${sideColor(i)}">Call ${sideName(i)}</button>`).join("")}</div>`;
+  }
+  setHTML(el,html);
+}
+function renderPres(){
+  const el=$("pres");
+  const rivalDone=rivalPresT!==null&&t>=rivalPresT;
+  let html=`<div class="ptitle">Call the presidency</div>`;
+  if(presCall){
+    html+=`<div class="verdict">You called the presidency for ${nameHTML(presCall.party)} at ${fmtTime(presCall.t)} with ${Math.round(presCall.r*100)}% of the national vote in.${rivalDone?` Rival called it at ${fmtTime(rivalPresT)}.`:""}${ended?`<br>${presCall.party===E.winner?`<b class="g">Correct! +${presPts()} pts.</b>`:`<b class="r">Wrong. ${presPts()} pts.</b>`}`:"<br>You'll find out at the end of the night."}</div>`;
+  }else{
+    html+=`<p class="psub">Who becomes president? ${maj} electoral votes is a majority this year. Worth up to 650 points if you're right and early; costs 600 if you're wrong.${rivalDone?` <b class="y">The rival network already called it at ${fmtTime(rivalPresT)}.</b>`:""}</p>
+    <div class="calls big">${E.cands.map((c,i)=>`<button data-pres="${i}" ${t<0||ended?"disabled":""} type="button" style="border-color:${sideColor(i)};color:${sideColor(i)};background:${sideColor(i)}1f">${sideName(i)} wins</button>`).join("")}</div>`;
+  }
+  if(ended&&!yearGuess)html+=`<button class="primary" id="backGuess" type="button" style="width:100%;margin-top:10px">Guess the year</button>`;
+  setHTML(el,html);
+}
+function renderBar(){
+  $("clock").textContent=fmtTime(t);
+  $("tl").style.width=(100*(t-START)/(END-START))+"%";
+  $("score").textContent=liveScore().toLocaleString();
+  const my=myEV(),rv=rivalEV(t);
+  $("evrow").innerHTML=E.cands.map((c,i)=>`<span style="color:${sideColor(i)}">${sideName(i)} ${my[i]}</span>`).join("")+`<span class="mid">${maj} to win</span>`;
+  let left=0;$("evbar").innerHTML=E.cands.map((c,i)=>{const w=100*my[i]/E.size;const h=`<i style="left:${left}%;width:${w}%;background:${sideColor(i)}"></i>`;left+=w;return h}).join("")+`<b class="half" style="left:${100*maj/E.size}%"></b>`;
+  $("rival").textContent="Rival network: "+E.cands.map((c,i)=>`${sideName(i)} ${rv[i]}`).join(" · ");
+  const lv=$("live");lv.textContent=ended?"Final":running?"Live":"Paused";lv.classList.toggle("on",running);
+  $("play").textContent=ended?"Done":running?"Pause":"Start";
+}
+function renderAll(){renderMap();renderDetail();renderPres();renderBar()}
+function chyron(h){$("chyron").innerHTML=h}
+
+// ---------- loop ----------
+function frame(ts){
+  if(!running){last=0;return}
+  if(last){
+    const prev=t;t=Math.min(END,t+(ts-last)/1000*PER_SEC*speed);
+    const closing=states.filter(s=>prev<s.close&&t>=s.close);
+    if(closing.length)chyron(`<b>${fmtTime(closing[0].close)} ET</b> Polls closed: ${closing.map(s=>s.a).join(", ")}`);
+    states.forEach(s=>{if(s.rivalT!==null&&t>=s.rivalT&&!seenRival.has(s.a)){seenRival.add(s.a);if(!closing.length&&!s.leg)chyron(`<b>RIVAL NETWORK</b> projects ${s.name} (${s.ev}) for ${sideName(s.winner)}.`)}});
+    if(rivalPresT!==null&&prev<rivalPresT&&t>=rivalPresT)chyron(`<b>RIVAL NETWORK PROJECTS: ${sideName(E.winner).toUpperCase()} WINS THE PRESIDENCY</b>`);
+    if(t>=END){endNight();return}
+    renderAll();
+  }
+  last=ts;requestAnimationFrame(frame);
+}
+function setRunning(v){running=v;renderBar();if(v){last=0;requestAnimationFrame(frame)}}
+
+// ---------- end of night ----------
+function yearOptions(){
+  rng=Math.random;
+  const near=ELECTIONS.map(e=>e.year).filter(y=>y!==E.year).sort((a,b)=>Math.abs(a-E.year)-Math.abs(b-E.year)).slice(0,8);
+  return shuffle([E.year,...shuffle(near).slice(0,3)]).sort((a,b)=>a-b);
+}
+function endNight(){
+  ended=true;running=false;t=END;renderAll();
+  const final=rivalEV(END), top=Math.max(...final);
+  const noMaj=top<maj;
+  if(noMaj)chyron(`<b>NO ONE HAS A MAJORITY.</b> The House of Representatives will choose the president.`);
+  $("endSheet").innerHTML=`<h2>Polls are closed. Which election was this?</h2>
+    ${noMaj?`<p class="y">Twist: no one reached ${maj} electoral votes. The House of Representatives decided this one.</p>`:""}
+    <p class="muted">Guess right for 250 more points.</p>
+    <div class="years">${yearOptions().map(y=>`<button type="button" data-year="${y}">${y}</button>`).join("")}</div>
+    <button class="ghost" id="peek" type="button">Look at the map first</button>`;
+  $("end").hidden=false;
+  $("peek").onclick=()=>{$("end").hidden=true;$("pres").dataset.h="";renderPres()};
+}
+function reveal(){
+  const total=liveScore();
+  const called=states.filter(s=>s.call), right=called.filter(s=>s.call.party===s.winner).length, wrong=called.length-right;
+  const rank=total<0?"Retraction Machine":total<400?"Intern":total<900?"Junior Analyst":total<1500?"Senior Analyst":total<2200?"Decision Desk Chief":"Election Night Legend";
+  const gotYear=yearGuess===E.year;
+  const allV=states.reduce((a,s)=>a+s.total,0);
+  const pv=E.cands.map((c,i)=>states.reduce((a,s)=>a+(s.leg?0:s.votes[i]),0));
+  const hasLeg=states.some(s=>s.leg);
+  const w=E.winner, W=E.cands[w];
+  const losers=E.cands.map((c,i)=>i).filter(i=>i!==w);
+  const share=`Mystery Election Night · ${label}\n${total.toLocaleString()} pts · ${rank}\nYear: ${gotYear?"✅":"❌"} · President call: ${!presCall?"⬜":presCall.party===w?"✅":"❌"}\nStates: ${right} right, ${wrong} wrong`;
+  $("endSheet").innerHTML=`
+    <div class="reveal">
+      <div class="muted" style="font-size:13px">${gotYear?`<b class="g">You got it!</b>`:`<b class="r">You guessed ${yearGuess}.</b>`} It was</div>
+      <div class="yr">${E.year}</div>
+      <div class="who">${nameHTML(w)} was <b>${W.name}</b> (${W.party}), who won the presidency${losers.length?` over ${losers.map(i=>`<b>${E.cands[i].name}</b> (${E.cands[i].party}, playing ${sideName(i)})`).join(losers.length>2?", ":" and ")}`:""}.</div>
+      <table class="num">${E.cands.map((c,i)=>`<tr><td>${sw(i)}${c.name}</td><td>${c.ev} EV · ${allV?(100*pv[i]/allV).toFixed(1):"–"}%</td></tr>`).join("")}</table>
+      <p class="muted" style="font-size:12.5px">Electoral votes are the official count. Popular vote is the share of all votes cast${hasLeg?" in states that held a popular vote":""}.</p>
+      <p style="font-size:14px">${E.note}</p>
+    </div>
+    <div><div class="big num">${total.toLocaleString()}</div><div class="rank">${rank}</div></div>
+    <table>
+      <tr><td>State calls<br><span class="muted">${right} right, ${wrong} wrong</span></td><td class="${called.reduce((a,s)=>a+statePts(s),0)<0?"r":"g"}">${called.reduce((a,s)=>a+statePts(s),0)}</td></tr>
+      <tr><td>Presidency call<br><span class="muted">${presCall?`${sideName(presCall.party)} at ${fmtTime(presCall.t)} ET`:"No call"}</span></td><td class="${presPts()<0?"r":presPts()>0?"g":"muted"}">${presPts()}</td></tr>
+      <tr><td>Year guess</td><td class="${gotYear?"g":"muted"}">${gotYear?250:0}</td></tr>
+    </table>
+    <div class="btns">
+      <button class="primary" id="copy" type="button">Copy my score</button>
+      <button class="ghost" id="again" type="button">Play another election</button>
+      <button class="ghost" id="close" type="button">Look at the final map</button>
+    </div>
+    <p class="muted" id="copied" style="font-size:12.5px">${E.year>=1976?"Results: MIT Election Data and Science Lab via Noah Veltman (1976–2020); 2024 summed from county results compiled by Tony McGovern.":"Results: Wikipedia state-by-state tables (which cite Dave Leip's Atlas and CQ's Guide to U.S. Elections), checked against official electoral vote totals."} Vote counting order is simulated; final results are real.</p>`;
+  $("copy").onclick=async()=>{try{await navigator.clipboard.writeText(share);$("copied").textContent="Copied. Send it to your partner."}catch(e){$("copied").textContent="Couldn't copy here. Your score: "+total}};
+  $("again").onclick=()=>{$("end").hidden=true;startRandom(era)};
+  $("close").onclick=()=>{$("end").hidden=true};
+  try{const k="men-played",pl=JSON.parse(localStorage.getItem(k)||"[]");if(!pl.includes(E.year)){pl.push(E.year);localStorage.setItem(k,JSON.stringify(pl))}}catch(e){}
+  renderAll();
+}
+
+// ---------- start ----------
+let era="all";
+function start(idx,seed,lbl){label=lbl;setup(idx,seed);buildMap();renderAll();chyron("Polls close in 10 minutes.");window.scrollTo(0,0);setRunning(true)}
+const today=new Date(),dkey=today.getFullYear()+"-"+(today.getMonth()+1)+"-"+today.getDate();
+function startDaily(){era="all";start(hashStr("men-"+dkey)%ELECTIONS.length,"daily-"+dkey,"Mystery of "+today.toLocaleDateString(undefined,{month:"short",day:"numeric"}))}
+function startRandom(which){
+  era=which||"all";
+  let pool=ELECTIONS.map((e,i)=>i).filter(i=>era==="all"||(era==="old"?ELECTIONS[i].year<1976:ELECTIONS[i].year>=1976));
+  try{const pl=JSON.parse(localStorage.getItem("men-played")||"[]");const un=pool.filter(i=>!pl.includes(ELECTIONS[i].year));if(un.length)pool=un}catch(e){}
+  const idx=pool[Math.floor(Math.random()*pool.length)];
+  start(idx,"r-"+Date.now(),"Random mystery");
+}
+
+// ---------- events ----------
+function pick(i){selected=i;renderMap();renderDetail()}
+document.addEventListener("click",e=>{
+  const r=e.target.closest("rect[data-i]");
+  if(r){pick(+r.dataset.i);return}
+  const c=e.target.closest("[data-call]");
+  if(c&&!c.disabled&&selected!==null){const s=states[selected];if(s.call||s.leg||t<s.close||ended)return;s.call={party:+c.dataset.call,t,r:at(s,t).r};chyron(`<b>YOUR DESK</b> projects ${s.name} (${s.ev}) for ${sideName(s.call.party)}.`);renderAll();return}
+  const p=e.target.closest("[data-pres]");
+  if(p&&!p.disabled&&!presCall&&!ended){presCall={party:+p.dataset.pres,t,r:nationalR(t)};chyron(`<b>YOUR DESK PROJECTS: ${sideName(presCall.party).toUpperCase()} WINS THE PRESIDENCY</b>`);renderAll();return}
+  const y=e.target.closest("[data-year]");
+  if(y){yearGuess=+y.dataset.year;reveal();return}
+  if(e.target.id==="backGuess"){$("end").hidden=false}
+});
+document.addEventListener("keydown",e=>{const r=e.target.closest&&e.target.closest("rect[data-i]");if(r&&(e.key==="Enter"||e.key===" ")){e.preventDefault();pick(+r.dataset.i)}});
+$("play").onclick=()=>{if(!ended)setRunning(!running)};
+document.querySelectorAll("[data-speed]").forEach(b=>b.onclick=()=>{speed=+b.dataset.speed;document.querySelectorAll("[data-speed]").forEach(x=>x.classList.toggle("sel",x===b))});
+$("startDaily").onclick=()=>{$("intro").hidden=true;startDaily()};
+document.querySelectorAll("[data-era]").forEach(b=>b.onclick=()=>{$("intro").hidden=true;startRandom(b.dataset.era)});
+
+// preview behind the intro
+setup(hashStr("men-"+dkey)%ELECTIONS.length,"daily-"+dkey);buildMap();renderAll();
+})();
+
+</script>
+</body>
+</html>

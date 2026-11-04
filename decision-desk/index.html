@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a broadcast election-night desk. Sticky control bar + chyron, then a single column of race cards. Single dark studio theme by choice. */
+:root{
+  --bg:#0b0f17; --panel:#141a26; --line:#252e40; --text:#e9edf5; --muted:#8b95a9;
+  --org:#ff8a3d; --pur:#a57cff; --call:#ffd23f; --good:#3ddc97; --bad:#ff5a5f;
+  --display:"Barlow Condensed", "Arial Narrow", sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;-webkit-text-size-adjust:100%}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--call);outline-offset:2px}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:640px;margin:0 auto;padding:0 14px 40px}
+
+/* top bar */
+.bar{position:sticky;top:0;z-index:5;background:rgba(11,15,23,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.bar-in{max-width:640px;margin:0 auto;padding:10px 14px 8px;display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center}
+.logo{white-space:nowrap;font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:.04em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.live{font-size:11px;font-family:var(--body);font-weight:600;letter-spacing:.08em;padding:2px 6px;border-radius:3px;background:var(--line);color:var(--muted)}
+.live.on{background:var(--bad);color:#fff}
+.score{font-family:var(--display);font-weight:700;font-size:22px;text-align:right}
+.score small{display:block;font-family:var(--body);font-size:11px;color:var(--muted);font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.clock{font-family:var(--display);font-size:20px;font-weight:600}
+.controls{display:flex;gap:6px;justify-content:flex-end}
+.controls button{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-size:13px;font-weight:600}
+.controls button.sel{border-color:var(--call);color:var(--call)}
+.timeline{grid-column:1/-1;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.timeline i{display:block;height:100%;background:var(--call);width:0}
+
+.chyron{grid-column:1/-1;font-size:13px;min-height:20px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chyron b{color:var(--call);font-weight:600}
+
+/* cards */
+.races{display:grid;gap:12px;margin-top:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 12px 12px;display:grid;gap:10px;position:relative;overflow:hidden}
+.card.closed-wait{opacity:.55}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:transparent}
+.card.called-org::before{background:var(--org)}
+.card.called-pur::before{background:var(--pur)}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.title{font-family:var(--display);font-weight:700;font-size:21px;line-height:1.05;text-transform:uppercase;letter-spacing:.02em}
+.title span{display:block;font-family:var(--body);font-size:12px;font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:3px}
+.pill{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 7px;border-radius:4px;background:var(--line);color:var(--muted);white-space:nowrap}
+.pill.counting{background:#2a2410;color:var(--call)}
+.pill.rival{background:#2b1a1d;color:#ff9a9d}
+.pill.done{background:#132a22;color:var(--good)}
+.shares{display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:8px}
+.side .pct{font-family:var(--display);font-size:30px;font-weight:700;line-height:1}
+.side .lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.side .v{font-size:12px;color:var(--muted)}
+.side.o .lbl,.side.o .pct{color:var(--org)}
+.side.p{text-align:right}
+.side.p .lbl,.side.p .pct{color:var(--pur)}
+.mid{text-align:center;font-size:12px;color:var(--muted);line-height:1.35}
+.mid b{display:block;color:var(--text);font-family:var(--display);font-size:18px;font-weight:600}
+.meter{height:10px;border-radius:5px;background:var(--line);position:relative;overflow:hidden;display:flex}
+.meter .mo{background:var(--org)}
+.meter .mp{background:var(--pur);margin-left:auto}
+.meter .half{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;background:var(--text);opacity:.5}
+.mapline{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center}
+.mapline svg{width:150px;height:auto;display:block}
+.mapline svg rect{cursor:pointer}
+.facts{font-size:12.5px;color:var(--muted);line-height:1.5}
+.facts b{color:var(--text);font-weight:600}
+.facts .tip{display:block;margin-top:4px;color:var(--text);min-height:2.6em}
+.calls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.calls button{border:1.5px solid;background:transparent;border-radius:8px;padding:10px 6px;font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:.04em;text-transform:uppercase}
+.calls .co{border-color:var(--org);color:var(--org)}
+.calls .cp{border-color:var(--pur);color:var(--pur)}
+.calls button:active{transform:scale(.98)}
+.calls button:disabled{opacity:.3;cursor:default}
+.verdict{font-size:13.5px;line-height:1.45;padding:9px 10px;border-radius:8px;background:#0f141e;border:1px solid var(--line)}
+.verdict b{font-weight:600}
+.verdict .g{color:var(--good)} .verdict .r{color:var(--bad)} .verdict .y{color:var(--call)}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:10;background:rgba(5,8,13,.86);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 14px}
+.overlay[hidden]{display:none}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:520px;width:100%;padding:20px 18px;display:grid;gap:14px}
+.sheet h1,.sheet h2{font-family:var(--display);text-transform:uppercase;margin:0;letter-spacing:.03em;text-wrap:balance}
+.sheet h1{font-size:34px;line-height:1}
+.sheet h2{font-size:26px}
+.sheet p,.sheet li{line-height:1.5;margin:0;font-size:14.5px}
+.sheet ol{margin:0;padding-left:20px;display:grid;gap:6px}
+.big{font-family:var(--display);font-size:56px;font-weight:800;line-height:1;color:var(--call)}
+.rank{font-family:var(--display);font-size:22px;font-weight:600;text-transform:uppercase}
+.btns{display:grid;gap:8px}
+.primary{background:var(--call);color:#141005;border:0;border-radius:10px;padding:13px;font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase}
+.ghost{background:transparent;border:1px solid var(--line);border-radius:10px;padding:11px;font-weight:600}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:6px 4px;border-top:1px solid var(--line);vertical-align:top}
+td:last-child{text-align:right;font-weight:600;white-space:nowrap}
+.muted{color:var(--muted)}
+.g{color:var(--good)} .r{color:var(--bad)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="logo">Decision Desk <span class="live" id="live">Paused</span></div>
+    <div class="score num"><small>Score</small><span id="score">0</span></div>
+    <div class="clock num" id="clock">6:50 PM</div>
+    <div class="controls">
+      <button id="play" type="button">Start</button>
+      <button data-speed="1" class="sel" type="button">1×</button>
+      <button data-speed="2" type="button">2×</button>
+      <button data-speed="4" type="button">4×</button>
+    </div>
+    <div class="timeline"><i id="tl"></i></div>
+    <div class="chyron" id="chyron">Polls close in 10 minutes. Final polls are in.</div>
+  </div>
+</div>
+
+<main class="wrap">
+  <div class="races" id="races"></div>
+</main>
+
+<div class="overlay" id="intro">
+  <div class="sheet">
+    <h1>Decision Desk</h1>
+    <p>You run an election-night decision desk. Eight made-up races, fake votes pouring in county by county. Your job: call each race before the rival network does, and never call one wrong.</p>
+    <div class="legend"><span><i class="dot" style="background:var(--org)"></i>Orange Party</span><span><i class="dot" style="background:var(--pur)"></i>Purple Party</span></div>
+    <ol>
+      <li><b>Call early, score big.</b> A correct call earns 100 points, plus up to 200 more the less vote is in.</li>
+      <li><b>Beat the rival network</b> for a 100-point scoop bonus.</li>
+      <li><b>A wrong call costs 300.</b> You won't know you blew it until the count finishes.</li>
+      <li><b>Watch what's still out.</b> Big cities report late, and mail ballots can swing a race hard in one direction. Tap any county for details.</li>
+    </ol>
+    <p class="muted">The night runs 7 PM to 3 AM in about three minutes. Use 2× or 4× to speed it up.</p>
+    <div class="btns">
+      <button class="primary" id="startDaily" type="button">Start tonight's races</button>
+      <button class="ghost" id="startRandom" type="button">Random set of races</button>
+    </div>
+    <p class="muted" style="font-size:13px">"Tonight's races" are the same for everyone today, so you and your partner can play separately and compare scores.</p>
+  </div>
+</div>
+
+<div class="overlay" id="end" hidden>
+  <div class="sheet" id="endSheet"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+// ---------- seeded random ----------
+function hashStr(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}return h>>>0}
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let rng=Math.random;
+const R=(a,b)=>a+(b-a)*rng();
+const RI=(a,b)=>Math.floor(R(a,b+1));
+const pick=a=>a[Math.floor(rng()*a.length)];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function gauss(){return Math.sqrt(-2*Math.log(1-rng()))*Math.cos(2*Math.PI*rng())}
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+const STATES=["Lakeland","Northmoor","Sunvale","Pinecrest","Harbor Bay","Prairie Bend","Ironwood","Silverton","Cedar Plains","Brightwater","Stonefield","Westmarch","Copper Falls","Juniper Coast"];
+const OFFICES=["Governor","Senate","Senate","Governor","House At-Large","Attorney General","Senate","Governor"];
+const COUNTY_WORDS=["Elm","Ash","Fox","Mill","Bear Creek","Willow","Granite","Clay","Hollow","Maple","Ridge","Otter","Quarry","Larch","Bluff","Wheat","Kettle","Birch","Flint","Marsh","Heron","Summit","Briar","Cobalt","Tamarack","Saddle","Orchard","Beacon","Drift","Hazel"];
+const CITY_PREFIX=["Port","New","Fort","Lake","East","Grand"];
+const START=-10, END=480; // minutes relative to 7:00 PM
+
+// ---------- generate a night ----------
+function genNight(seed){
+  rng=mulberry32(hashStr(seed));
+  const states=shuffle(STATES).slice(0,8);
+  const closes=[0,0,60,60,120,120,180,180];
+  const margins=shuffle([R(.3,2.5),R(.4,3),R(1.5,4.5),R(3,7),R(4,9),R(6,11),R(14,22),R(15,26)]).map(m=>m*(rng()<.5?-1:1));
+  const offices=shuffle(OFFICES);
+  const races=states.map((st,i)=>genRace(i,st,offices[i],closes[i],margins[i]));
+  return races;
+}
+
+function genRace(id,state,office,close,target){
+  const cols=6,rows=4,cells=[];
+  for(let y=0;y<rows;y++)for(let x=0;x<cols;x++){
+    const d=Math.hypot((x-2.5)/3,(y-1.5)/2);
+    if(rng()>d*.55-.05)cells.push({x,y});
+  }
+  while(cells.length<14){ // top up
+    const x=RI(0,cols-1),y=RI(0,rows-1);
+    if(!cells.some(c=>c.x===x&&c.y===y))cells.push({x,y});
+  }
+  const names=shuffle(COUNTY_WORDS);
+  const nCities=rng()<.45?2:1;
+  const cityIdx=shuffle(cells.map((_,i)=>i)).slice(0,nCities);
+  const counties=cells.map((c,i)=>({...c,type:"rural",name:names[i%names.length]+" County"}));
+  cityIdx.forEach((ci,k)=>{
+    const c=counties[ci];c.type="city";c.name=CITY_PREFIX[(id+k)%CITY_PREFIX.length]+" "+state.split(" ")[0]+" County";
+    counties.forEach(o=>{if(o.type==="rural"&&Math.abs(o.x-c.x)+Math.abs(o.y-c.y)===1&&rng()<.85)o.type="suburb"});
+  });
+  const cityParty=rng()<.5?"O":"P";
+  const scale=R(9000,22000);
+  counties.forEach(c=>{
+    const w=c.type==="city"?R(9,16):c.type==="suburb"?R(3,6):R(.6,2);
+    c.votes=Math.round(w*scale);
+    const base=c.type==="city"?R(.64,.76):c.type==="suburb"?R(.46,.58):R(.27,.41);
+    c.base=cityParty==="O"?base:1-base;
+  });
+  // shift so statewide O share hits target
+  const targetS=.5+target/200, tot=counties.reduce((a,c)=>a+c.votes,0);
+  let lo=-.5,hi=.5;
+  for(let k=0;k<40;k++){const mid=(lo+hi)/2;const s=counties.reduce((a,c)=>a+c.votes*clamp(c.base+mid,.06,.94),0)/tot;if(s<targetS)lo=mid;else hi=mid}
+  const lateK=(rng()<.5?1:-1)*R(.03,.09); // early votes lean one way, mail the other
+  const f=R(.55,.68);
+  counties.forEach(c=>{
+    const s=clamp(c.base+(lo+hi)/2,.06,.94);
+    c.v1=Math.round(c.votes*f); c.v2=c.votes-c.v1;
+    c.s1=clamp(s+lateK,.04,.96); c.s2=clamp(s-lateK*f/(1-f),.04,.96);
+    const delay=c.type==="city"?R(25,95):c.type==="suburb"?R(10,55):R(3,30);
+    c.t1=close+delay; c.d1=R(30,95); c.n1=RI(2,6);
+    c.t2=c.t1+c.d1+R(5,c.type==="city"?170:110); c.d2=R(30,c.type==="city"?190:120); c.n2=RI(2,5);
+  });
+  const race={id,state,office,close,counties,call:null,revealed:false,tip:""};
+  const fin=tally(race,1e9);
+  race.finalMargin=fin.margin; race.winner=fin.o>=fin.p?"O":"P"; race.total=fin.total;
+  race.poll=Math.round(target+gauss()*3);
+  // rival network timing
+  const am=Math.abs(race.finalMargin);
+  race.rivalT=null;
+  if(am>=12)race.rivalT=close+RI(1,6);
+  else if(am>=.5){
+    const thr=clamp(1-am*.075+R(-.03,.06),.3,.97);
+    for(let t=close;t<=END;t++){const s=tally(race,t);if(s.r>=thr&&s.reported>0&&(s.o>=s.p?"O":"P")===race.winner){race.rivalT=t;break}}
+  }
+  return race;
+}
+
+function prog(t,s,d,n){const x=(t-s)/d;if(x<=0)return 0;if(x>=1)return 1;return Math.ceil(x*n)/n}
+function countyAt(c,t){
+  const p1=prog(t,c.t1,c.d1,c.n1),p2=prog(t,c.t2,c.d2,c.n2);
+  const o=c.v1*p1*c.s1+c.v2*p2*c.s2, n=c.v1*p1+c.v2*p2;
+  return {o,p:n-o,n,r:n/c.votes,mail:p2};
+}
+function tally(race,t){
+  let o=0,p=0,total=0,mailIn=0,mailTot=0;
+  race.counties.forEach(c=>{const s=countyAt(c,t);o+=s.o;p+=s.p;total+=c.votes;mailIn+=c.v2*s.mail;mailTot+=c.v2});
+  const reported=o+p;
+  return {o,p,reported,total,r:reported/total,margin:reported?100*(o-p)/reported:0,mail:mailIn/mailTot};
+}
+
+// ---------- state ----------
+let races=[],t=START,running=false,speed=1,last=0,seedLabel="",ended=false,rivalSeen=new Set();
+const PER_SEC=2.5; // game minutes per real second at 1x
+
+function fmtTime(m){let mins=Math.round(m)+19*60;mins=((mins%1440)+1440)%1440;let h=Math.floor(mins/60),mm=mins%60;const ap=h>=12?"PM":"AM";h=h%12||12;return h+":"+String(mm).padStart(2,"0")+" "+ap}
+function fmtV(n){if(n>=1e6)return(n/1e6).toFixed(2)+"M";if(n>=1e3)return Math.round(n/1e3)+"K";return String(Math.round(n))}
+const PN={O:"Orange",P:"Purple"};
+function lead(m){if(Math.abs(m)<.05)return"Even";return(m>0?"Orange":"Purple")+" +"+Math.abs(m).toFixed(1)}
+
+function points(race){
+  const c=race.call;if(!c)return 0;
+  if(c.party!==race.winner)return -300;
+  let pts=100+Math.round(200*(1-c.r));
+  if(race.rivalT===null||c.t<race.rivalT)pts+=100;
+  return pts;
+}
+
+// ---------- render ----------
+const $=id=>document.getElementById(id);
+function buildCards(){
+  $("races").innerHTML=races.map(r=>`
+  <article class="card" id="c${r.id}">
+    <div class="head">
+      <div class="title">${r.state} ${r.office}<span>Polls close ${fmtTime(r.close)} · Final poll: ${r.poll===0?"tied":(r.poll>0?"Orange +":"Purple +")+Math.abs(r.poll)}</span></div>
+      <span class="pill" data-k="pill"></span>
+    </div>
+    <div data-k="shares"></div>
+    <div class="mapline">
+      <svg viewBox="0 0 144 96" aria-label="County map of ${r.state}">${r.counties.map((c,i)=>`<rect data-race="${r.id}" data-county="${i}" x="${c.x*24+1}" y="${c.y*24+1}" width="22" height="22" rx="3"></rect>${c.type==="city"?`<circle cx="${c.x*24+12}" cy="${c.y*24+12}" r="3" fill="#fff" pointer-events="none"></circle>`:""}`).join("")}</svg>
+      <div class="facts" data-k="facts"></div>
+    </div>
+    <div data-k="bottom"></div>
+  </article>`).join("");
+}
+
+function renderRace(r){
+  const el=$("c"+r.id), s=tally(r,t), open=t<r.close;
+  const done=s.r>=.9999||ended;
+  if(done&&!r.revealed&&t>=r.close){r.revealed=true}
+  el.classList.toggle("closed-wait",open);
+  el.classList.toggle("called-org",!!r.call&&r.call.party==="O");
+  el.classList.toggle("called-pur",!!r.call&&r.call.party==="P");
+  const pill=el.querySelector('[data-k="pill"]');
+  const rivalCalled=r.rivalT!==null&&t>=r.rivalT;
+  if(open){pill.className="pill";pill.textContent="Polls open"}
+  else if(r.revealed){pill.className="pill done";pill.textContent="Final"}
+  else if(rivalCalled){pill.className="pill rival";pill.textContent="Rival called it"}
+  else{pill.className="pill counting";pill.textContent="Counting"}
+
+  const op=s.reported?100*s.o/s.reported:50, pp=s.reported?100-op:50;
+  el.querySelector('[data-k="shares"]').innerHTML=`
+    <div class="shares">
+      <div class="side o"><div class="lbl">Orange</div><div class="pct num">${s.reported?op.toFixed(1)+"%":"–"}</div><div class="v num">${fmtV(s.o)} votes</div></div>
+      <div class="mid num"><b>${Math.round(s.r*100)}%</b>expected<br>vote in</div>
+      <div class="side p"><div class="lbl">Purple</div><div class="pct num">${s.reported?pp.toFixed(1)+"%":"–"}</div><div class="v num">${fmtV(s.p)} votes</div></div>
+    </div>
+    <div class="meter" style="margin-top:8px">${s.reported?`<div class="mo" style="width:${op*s.r}%"></div><div class="mp" style="width:${pp*s.r}%"></div>`:""}<div class="half"></div></div>`;
+
+  // map colors
+  el.querySelectorAll("rect").forEach(rect=>{
+    const c=r.counties[+rect.dataset.county], cs=countyAt(c,t);
+    if(cs.n<=0){rect.setAttribute("fill","#1f2737");rect.setAttribute("stroke","#2c3649");rect.setAttribute("stroke-width","1");rect.removeAttribute("fill-opacity");return}
+    const m=(cs.o-cs.p)/cs.n;
+    rect.setAttribute("fill",m>=0?"#ff8a3d":"#a57cff");
+    rect.setAttribute("fill-opacity",(0.3+0.7*clamp(Math.abs(m)/.4,0,1)).toFixed(2));
+    rect.setAttribute("stroke",cs.r<.999?"#e9edf5":"none");
+    rect.setAttribute("stroke-width",cs.r<.999?"1":"0");
+    rect.setAttribute("stroke-dasharray",cs.r<.999?"3 2":"");
+  });
+  const outCity=r.counties.filter(c=>c.type==="city"&&countyAt(c,t).r<.6).length;
+  el.querySelector('[data-k="facts"]').innerHTML=open
+    ? `Votes start coming in after polls close at <b>${fmtTime(r.close)}</b>.<span class="tip">${r.tip}</span>`
+    : `Margin: <b>${s.reported?lead(s.margin):"no votes yet"}</b><br>Votes left: <b class="num">~${fmtV(s.total-s.reported)}</b><br>Mail counted: <b class="num">${Math.round(s.mail*100)}%</b>${outCity?` · <b>${outCity} big ${outCity>1?"cities":"city"} still out</b>`:""}<span class="tip">${r.tip||"Tap a county for details. Dashed outline = still counting."}</span>`;
+
+  const bottom=el.querySelector('[data-k="bottom"]');
+  if(r.call||r.revealed){
+    let html="";
+    if(r.call)html+=`You called it for <b style="color:var(--${r.call.party==="O"?"org":"pur"})">${PN[r.call.party]}</b> at ${fmtTime(r.call.t)} with ${Math.round(r.call.r*100)}% in.`;
+    else html+=`You didn't call this race.`;
+    if(r.rivalT!==null&&t>=r.rivalT)html+=` Rival called it at ${fmtTime(r.rivalT)}.`;
+    if(r.revealed){
+      const fm=r.finalMargin;
+      html+=`<br>Final: <b>${PN[r.winner]} wins by ${Math.abs(fm).toFixed(2)} pts.</b> `;
+      if(r.call){const p=points(r);html+=p<0?`<span class="r"><b>Wrong call. Retraction. ${p} pts.</b></span>`:`<span class="g"><b>Correct! +${p} pts${(r.rivalT===null||r.call.t<r.rivalT)?" (scoop!)":""}.</b></span>`}
+      else if(Math.abs(fm)<.5)html+=`<span class="y">Too close to call. Smart to stay out.</span>`;
+    }
+    html=`<div class="verdict">${html}</div>`;
+    if(bottom.dataset.h!==html){bottom.dataset.h=html;bottom.innerHTML=html}
+  }else{
+    const dis=open||ended?"disabled":"";
+    const html=`<div class="calls"><button class="co" data-call="O" data-race="${r.id}" ${dis} type="button">Call Orange</button><button class="cp" data-call="P" data-race="${r.id}" ${dis} type="button">Call Purple</button></div>`;
+    if(bottom.dataset.h!==html){bottom.dataset.h=html;bottom.innerHTML=html}
+  }
+}
+
+function renderBar(){
+  $("clock").textContent=fmtTime(t);
+  $("tl").style.width=(100*(t-START)/(END-START))+"%";
+  const sc=races.filter(r=>r.revealed).reduce((a,r)=>a+points(r),0);
+  $("score").textContent=sc.toLocaleString();
+  const lv=$("live");lv.textContent=ended?"Final":running?"Live":"Paused";lv.classList.toggle("on",running);
+  $("play").textContent=ended?"Done":running?"Pause":"Start";
+}
+function renderAll(){races.forEach(renderRace);renderBar()}
+
+function chyron(msg){$("chyron").innerHTML=msg}
+
+// ---------- loop ----------
+function frame(ts){
+  if(!running){last=0;return}
+  if(last){
+    const prev=t;
+    t=Math.min(END,t+(ts-last)/1000*PER_SEC*speed);
+    races.forEach(r=>{
+      if(prev<r.close&&t>=r.close)chyron(`<b>${fmtTime(r.close)}</b> Polls are now closed in ${r.state}.`);
+      if(r.rivalT!==null&&t>=r.rivalT&&!rivalSeen.has(r.id)){rivalSeen.add(r.id);chyron(`<b>RIVAL NETWORK</b> projects ${r.state} ${r.office}: ${PN[r.winner]} wins.`)}
+    });
+    if(t>=END){endNight();return}
+    renderAll();
+  }
+  last=ts;requestAnimationFrame(frame);
+}
+function setRunning(v){running=v;renderBar();if(v){last=0;requestAnimationFrame(frame)}}
+
+function endNight(){
+  ended=true;running=false;t=END;
+  races.forEach(r=>r.revealed=true);
+  renderAll();
+  const total=races.reduce((a,r)=>a+points(r),0);
+  const right=races.filter(r=>r.call&&r.call.party===r.winner).length;
+  const wrong=races.filter(r=>r.call&&r.call.party!==r.winner).length;
+  const scoops=races.filter(r=>r.call&&r.call.party===r.winner&&(r.rivalT===null||r.call.t<r.rivalT)).length;
+  const rank=total<0?"Retraction Machine":total<600?"Intern":total<1200?"Junior Analyst":total<1800?"Senior Analyst":total<2400?"Decision Desk Chief":"Map Wizard";
+  const share=`Decision Desk · ${seedLabel}\n${total.toLocaleString()} pts · ${rank}\n✅ ${right} correct · ❌ ${wrong} wrong · ⚡ ${scoops} scoops\n`+races.map(r=>!r.call?"⬜":r.call.party!==r.winner?"🟥":r.call.party==="O"?"🟧":"🟪").join("");
+  $("endSheet").innerHTML=`
+    <h2>That's a wrap</h2>
+    <div><div class="big num">${total.toLocaleString()}</div><div class="rank">${rank}</div></div>
+    <p>${right} correct, ${wrong} wrong, ${scoops} scoop${scoops===1?"":"s"} on the rival network.</p>
+    <table>${races.map(r=>{const p=points(r);return `<tr><td>${r.state} ${r.office}<br><span class="muted">${PN[r.winner]} by ${Math.abs(r.finalMargin).toFixed(2)}${r.call?` · you called ${PN[r.call.party]} at ${Math.round(r.call.r*100)}%`:" · no call"}</span></td><td class="${p<0?"r":p>0?"g":"muted"}">${p>0?"+":""}${p}</td></tr>`}).join("")}</table>
+    <div class="btns">
+      <button class="primary" id="copy" type="button">Copy my score</button>
+      <button class="ghost" id="again" type="button">Play a random set of races</button>
+      <button class="ghost" id="review" type="button">Look at the final map</button>
+    </div>
+    <p class="muted" id="copied" style="font-size:13px"></p>`;
+  $("end").hidden=false;
+  $("copy").onclick=async()=>{try{await navigator.clipboard.writeText(share);$("copied").textContent="Copied. Paste it to your partner."}catch(e){$("copied").textContent="Couldn't copy here. Your score: "+total}};
+  $("again").onclick=()=>{$("end").hidden=true;startGame("random-"+Date.now(),"Random races")};
+  $("review").onclick=()=>{$("end").hidden=true};
+}
+
+function startGame(seed,label){
+  seedLabel=label;races=genNight(seed);t=START;ended=false;rivalSeen=new Set();
+  buildCards();renderAll();chyron("Polls close in 10 minutes. Final polls are in.");
+  window.scrollTo(0,0);setRunning(true);
+}
+
+// ---------- events ----------
+document.addEventListener("click",e=>{
+  const b=e.target.closest("[data-call]");
+  if(b&&!b.disabled){
+    const r=races[+b.dataset.race];if(r.call||t<r.close||ended)return;
+    const s=tally(r,t);r.call={party:b.dataset.call,t,r:s.r};
+    chyron(`<b>YOUR DESK</b> projects ${r.state} ${r.office}: ${PN[b.dataset.call]} wins.`);
+    renderRace(r);return;
+  }
+  const rect=e.target.closest("rect[data-county]");
+  if(rect){
+    const r=races[+rect.dataset.race],c=r.counties[+rect.dataset.county],cs=countyAt(c,t);
+    const kind=c.type==="city"?"Big city":c.type==="suburb"?"Suburbs":"Rural";
+    r.tip=`<b>${c.name}</b> (${kind}): ${cs.n?lead(100*(cs.o-cs.p)/cs.n)+", "+Math.round(cs.r*100)+"% in":"no votes yet"}`;
+    renderRace(r);
+  }
+});
+$("play").onclick=()=>{if(ended)return;setRunning(!running)};
+document.querySelectorAll("[data-speed]").forEach(b=>b.onclick=()=>{speed=+b.dataset.speed;document.querySelectorAll("[data-speed]").forEach(x=>x.classList.toggle("sel",x===b))});
+const today=new Date(),dkey=today.getFullYear()+"-"+(today.getMonth()+1)+"-"+today.getDate();
+$("startDaily").onclick=()=>{$("intro").hidden=true;startGame("daily-"+dkey,today.toLocaleDateString(undefined,{month:"short",day:"numeric"}))};
+$("startRandom").onclick=()=>{$("intro").hidden=true;startGame("random-"+Date.now(),"Random races")};
+
+// preview state behind intro
+races=genNight("daily-"+dkey);buildCards();renderAll();
+})();
+</script>
+</body>
+</html>
