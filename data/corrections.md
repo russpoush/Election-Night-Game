@@ -20,3 +20,17 @@ Every change made to what was read from Wikipedia, and why.
 | 1896 | CO | Repaired a malformed field from the reader | Merged Bryan total 161,005 and 4 EVs, matching the official result |
 | 1960 | AL, MS, OK | "Unpledged electors" and Byrd merged into one column (Byrd) | Unpledged electors from Alabama (6) and Mississippi (8) plus one Oklahoma faithless elector voted for Harry Byrd (15 total) |
 | 1968 | CO–WY, DC | Rows taken from a Wikipedia mirror (wiki.krisyotam.com) of the same article | The main page was too long for the reader and cut off after California |
+
+## Senate and House (MIT Election Lab files)
+
+| Race | Change | Reason |
+|---|---|---|
+| Senate 2014 Louisiana | Left out | Source file's Cassidy (1,712,379) and Landrieu (1,561,210) totals are corrupted; the real November open-primary figures were about 0.6M each |
+| Senate 2020 Wyoming | Lummis set to Republican | Party field is blank in the source |
+| Senate 1980 North Dakota | Missing | Not in the source file |
+| Senate 1986 North Carolina, 2010 Illinois | Only the special election is in the file | Both seats were filled by elections held the same day; the file lists just the special |
+| House, all years | Party = Democratic if any ballot line is Democratic (incl. DFL/NPL), Republican if any line includes "Republican" (incl. Minnesota's "Independent-Republican") | Fusion and state party labels |
+| House 1996 Texas (13 districts) | November court-ordered open elections used (filed as special "primaries") | Redistricting replaced the regular general election |
+| House 2006 Texas (4 districts) | Special general election used | Redistricting replaced the regular general election |
+| House, all years | D.C. delegate and territories left out | Non-voting members |
+| House, unopposed seats | Decided at poll close | Some states (e.g., Florida) don't print unopposed races, so there are no vote counts |
