@@ -1,0 +1,12 @@
+DE|-|Carney|D|58.3|Bonini|R|39.2
+IN|-|Holcomb|R|51.4|Gregg|D|45.4
+MO|-|Greitens|R|51.1|Koster|D|45.6
+MT|-|Bullock|D|50.3|Gianforte|R|46.4
+NH|-|Sununu|R|48.8|Van Ostern|D|46.6
+NC|-|Cooper|D|49.0|McCrory|R|48.8
+ND|-|Burgum|R|76.5|Nelson|D|19.4
+OR|S|Brown|D|50.6|Pierce|R|43.6
+UT|-|Herbert|R|66.7|Weinholtz|D|28.7
+VT|-|Scott|R|52.9|Minter|D|44.2
+WA|-|Inslee|D|54.2|Bryant|R|45.5
+WV|-|Justice|D|49.1|Cole|R|42.3

@@ -1,0 +1,11 @@
+DE|-|Meyer|D|56.07|Ramone|R|43.93
+IN|-|Braun|R|54.38|McCormick|D|41.11
+MO|-|Kehoe|R|59.14|Quade|D|38.72
+MT|-|Gianforte|R|58.86|Busse|D|38.62
+NH|-|Ayotte|R|53.61|Craig|D|44.27
+NC|-|Stein|D|54.90|Robinson|R|40.08
+ND|-|Armstrong|R|68.26|Piepkorn|D|25.98
+UT|-|Cox|R|52.89|King|D|28.63
+VT|-|Scott|R|73.43|Charlestin|D|21.83
+WA|-|Ferguson|D|55.51|Reichert|R|44.28
+WV|-|Morrisey|R|61.99|Williams|D|31.58

@@ -1,0 +1,11 @@
+DE|-|Markell|D|67.52|Lee|R|32.05
+IN|-|Daniels|R|57.84|Thompson|D|40.04
+MO|-|Nixon|D|58.40|Hulshof|R|39.49
+MT|-|Schweitzer|D|65.47|Brown|R|32.52
+NH|-|Lynch|D|70.15|Kenney|R|27.61
+NC|-|Perdue|D|50.27|McCrory|R|46.88
+ND|-|Hoeven|R|74.44|Mathern|D|23.53
+UT|-|Huntsman|R|77.63|Springmeyer|D|19.72
+VT|-|Douglas|R|53.43|Pollina|I|21.87
+WA|-|Gregoire|D|53.24|Rossi|R|46.76
+WV|-|Manchin|D|69.81|Weeks|R|25.73

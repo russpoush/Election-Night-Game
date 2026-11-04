@@ -1,0 +1,11 @@
+DE|-|Minner|D|50.9|Lee|R|45.8
+IN|-|Daniels|R|53.2|Kernan|D|45.5
+MO|-|Blunt|R|50.8|McCaskill|D|47.8
+MT|-|Schweitzer|D|50.4|Brown|R|46.0
+NH|-|Lynch|D|51.0|Benson|R|48.9
+NC|-|Easley|D|55.6|Ballantine|R|42.9
+ND|-|Hoeven|R|71.3|Satrom|D|27.4
+UT|-|Huntsman|R|57.7|Matheson|D|41.3
+VT|-|Douglas|R|58.7|Clavelle|D|37.9
+WA|-|Gregoire|D|48.9|Rossi|R|48.9
+WV|-|Manchin|D|63.5|Warner|R|34.0

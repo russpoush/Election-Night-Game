@@ -1,0 +1,12 @@
+DE|-|Carper|D|64.7|Scott|R|32.7
+IN|-|Bayh|D|62.0|Pearson|R|36.9
+MO|-|Carnahan|D|58.7|Webster|R|41.3
+MT|-|Racicot|R|51.3|Bradley|D|48.6
+NH|-|Merrill|R|56.0|Arnesen|D|40.0
+NC|-|Hunt|D|52.7|Gardner|R|43.2
+ND|-|Schafer|R|56.0|Spaeth|D|39.3
+RI|-|Sundlun|D|61.6|Leonard|R|34.3
+UT|-|Leavitt|R|42.2|Cook|I|33.5
+VT|-|Dean|D|74.7|McClaughry|R|23.0
+WA|-|Lowry|D|52.2|Eikenberry|R|47.8
+WV|-|Caperton|D|56.0|Benedict|R|36.6

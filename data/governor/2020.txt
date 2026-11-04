@@ -1,0 +1,11 @@
+DE|-|Carney|D|59.46|Murray|R|38.63
+IN|-|Holcomb|R|56.51|Myers|D|32.05
+MO|-|Parson|R|57.11|Galloway|D|40.69
+MT|-|Gianforte|R|54.43|Cooney|D|41.56
+NH|-|Sununu|R|65.12|Feltes|D|33.36
+NC|-|Cooper|D|51.52|Forest|R|47.01
+ND|-|Burgum|R|65.84|Lenz|D|25.38
+UT|-|Cox|R|62.98|Peterson|D|30.35
+VT|-|Scott|R|68.49|Zuckerman|P|27.35
+WA|-|Inslee|D|56.56|Culp|R|43.12
+WV|-|Justice|R|63.49|Salango|D|30.22

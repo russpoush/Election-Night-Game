@@ -1,0 +1,13 @@
+AR|-|Clinton|D|62.5|Freeman|R|37.4
+DE|-|Castle|R|55.0|Quillen|D|45.0
+IN|-|Orr|R|52.16|Townsend|D|47.18
+MO|-|Ashcroft|R|56.7|Rothman|D|43.3
+MT|-|Schwinden|D|70.3|Goodover|R|26.4
+NH|-|Sununu|R|66.8|Spirou|D|33.1
+NC|-|Martin|R|54.3|Edmisten|D|45.4
+ND|-|Sinner|D|55.3|Olson|R|44.7
+RI|-|DiPrete|R|60.0|Solomon|D|40.0
+UT|-|Bangerter|R|55.9|Owens|D|43.8
+VT|-|Kunin|D|50.0|Easton|R|48.5
+WA|-|Gardner|D|53.3|Spellman|R|46.7
+WV|-|Moore|R|53.3|See|D|46.7

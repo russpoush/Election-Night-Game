@@ -1,0 +1,11 @@
+DE|-|Markell|D|69.3|Cragg|R|28.6
+IN|-|Pence|R|49.5|Gregg|D|46.6
+MO|-|Nixon|D|54.8|Spence|R|42.5
+MT|-|Bullock|D|48.9|Hill|R|47.3
+NH|-|Hassan|D|54.6|Lamontagne|R|42.5
+NC|-|McCrory|R|54.6|Dalton|D|43.2
+ND|-|Dalrymple|R|63.1|Taylor|D|34.3
+UT|-|Herbert|R|68.4|Cooke|D|27.6
+VT|-|Shumlin|D|57.8|Brock|R|37.6
+WA|-|Inslee|D|51.5|McKenna|R|48.5
+WV|-|Tomblin|D|50.5|Maloney|R|45.7

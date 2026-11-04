@@ -1,5 +1,6 @@
 const ELECTIONS=__DATA__;
 const CONGRESS=__CONGRESS__;
+const GOV=__GOVERNOR__;
 (function(){
 "use strict";
 function hashStr(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}return h>>>0}
@@ -14,7 +15,7 @@ const GRID={AK:[0,0],ME:[10,0],VT:[9,1],NH:[10,1],WA:[0,2],ID:[1,2],MT:[2,2],ND:
 const CLOSE={GA:0,IN:0,KY:0,SC:0,VT:0,VA:0,NC:30,OH:30,WV:30,AL:60,CT:60,DE:60,DC:60,FL:60,IL:60,ME:60,MD:60,MA:60,MS:60,MO:60,NH:60,NJ:60,OK:60,PA:60,RI:60,TN:60,AR:90,AZ:120,CO:120,KS:120,LA:120,MI:120,MN:120,NE:120,NM:120,NY:120,ND:120,SD:120,TX:120,WI:120,WY:120,IA:180,MT:180,NV:180,UT:180,CA:240,HI:240,ID:240,OR:240,WA:240,AK:360};
 const COLORS=[{n:"Orange",c:"#ff8a3d",ink:"#1a0d02"},{n:"Purple",c:"#a57cff",ink:"#140a2b"},{n:"Teal",c:"#2ec4b6",ink:"#04201d"},{n:"Pink",c:"#ff6b9a",ink:"#2b0612"},{n:"Lime",c:"#a3d94a",ink:"#152203"}];
 const START=-10, END=480, PER_SEC=2.5;
-const KIND_LABEL={pres:"Presidential",senate:"Senate",house:"House"};
+const KIND_LABEL={pres:"Presidential",senate:"Senate",house:"House",gov:"Governor"};
 const PARTY3=[{name:"Democrats",short:"Democrats",party:"Democratic"},{name:"Republicans",short:"Republicans",party:"Republican"},{name:"Independents & others",short:"Independents",party:"Independent / third party"}];
 
 // ---------- set up a night ----------
@@ -70,12 +71,12 @@ function oneHot(i,n,k=1){const a=Array(n).fill(0);if(i>=0)a[i]=k;return a}
 
 function setup(k,idx,seed){
   kind=k;rng=mulberry32(hashStr(seed));
-  if(k==="pres")setupPres(idx);else if(k==="senate")setupSenate(idx);else setupHouse(idx);
+  if(k==="pres")setupPres(idx);else if(k==="senate")setupSenate(idx);else if(k==="gov")setupGov(idx);else setupHouse(idx);
   col=shuffle([0,1,2,3,4]).slice(0,NS());
   // rival network: when does a side become certain of the big prize?
   rivalPresT=null;
   const times=new Set();units.forEach(u=>{if(u.districts)u.districts.forEach(d=>{if(d.rivalT!==null)times.add(d.rivalT)});else if(u.rivalT!==null)times.add(u.rivalT)});
-  for(const m of [...times].sort((a,b)=>a-b)){if(rivalSeats(m).some(v=>v>=maj)){rivalPresT=m;break}}
+  for(const m of [...times].sort((a,b)=>a-b)){if(mostDecided(m)){rivalPresT=m;break}}
   t=START;ended=false;selected=null;presCall=null;seenRival=new Set();yearGuess=null;
 }
 function setupPres(idx){
@@ -101,7 +102,25 @@ function setupSenate(idx){
   });
   units.forEach(u=>{if(u.leg)u.unopp=true});
   const wins=cands.map(c=>c.ev);
-  E={kind:"senate",year:Y.year,cands,winner:wins.indexOf(Math.max(...wins)),size:units.length,years:CONGRESS.senate.map(y=>y.year),note:""};
+  E={kind:"senate",year:Y.year,cands,winner:mostWinner(wins),size:units.length,years:CONGRESS.senate.map(y=>y.year),note:""};
+  maj=Math.floor(units.length/2)+1;
+}
+function setupGov(idx){
+  const Y=GOV[idx];
+  const has3=Y.races.some(r=>r[3]===2);
+  const cands=PARTY3.slice(0,has3?3:2).map(c=>({...c,ev:0}));
+  const hy=CONGRESS.house.find(h=>h.year===Y.year);
+  units=Y.races.map(([a,special,wn,ws,wp,wpct,rn,rs,rp,rpct,note])=>{
+    // only percentages are known; scale them by the state's House turnout that year so counting speed feels right
+    let total=1e6;if(hy&&hy.states[a])total=Math.max(2e5,hy.states[a].reduce((x,d)=>x+d[2],0));
+    const votes=cands.map(()=>0);
+    if(ws<cands.length)votes[ws]+=wpct/100*total;
+    if(rs<cands.length)votes[rs]+=rpct/100*total;
+    cands[ws].ev++;
+    return simRace({a,special:!!special,name:NAMES[a]+(special?" (special)":""),ev:1,leg:false,votes,evs:oneHot(ws,cands.length),total,call:null,winner:ws,who:`${wn} (${wp})`,runner:`${rn} (${rp})`,note},CLOSE[a]);
+  });
+  const wins=cands.map(c=>c.ev);
+  E={kind:"gov",year:Y.year,cands,winner:mostWinner(wins),size:units.length,years:GOV.map(y=>y.year),note:"",pctOnly:true};
   maj=Math.floor(units.length/2)+1;
 }
 function setupHouse(idx){
@@ -132,6 +151,15 @@ function setupHouse(idx){
   E={kind:"house",year:Y.year,cands,winner:seats.indexOf(Math.max(...seats)),size:435,years:CONGRESS.house.map(y=>y.year),note:""};
   maj=218;
 }
+// Is the big prize settled by rival-network calls at minute m?
+function mostDecided(m){
+  const c=rivalSeats(m);
+  if(kind==="pres"||kind==="house")return c.some(v=>v>=maj);
+  const left=units.length-c.reduce((a,b)=>a+b,0);
+  if(E.winner<0)return left===0;
+  return c.every((v,i)=>i===E.winner||c[E.winner]>v+left);
+}
+function mostWinner(wins){const top=Math.max(...wins);return wins.filter(w=>w===top).length>1?-1:wins.indexOf(top)}
 function rivalSeats(m){
   const e=E.cands.map(()=>0);
   units.forEach(u=>{
@@ -157,7 +185,7 @@ function fmtTime(m){let mins=Math.round(m)+19*60;mins=((mins%1440)+1440)%1440;le
 function fmtV(n){if(n>=1e6)return(n/1e6).toFixed(2)+"M";if(n>=1e3)return Math.round(n/1e3)+"K";return String(Math.round(n))}
 const $=id=>document.getElementById(id);
 function setHTML(el,html){if(el.dataset.h!==html){el.dataset.h=html;el.innerHTML=html}}
-const unitWord=()=>kind==="pres"?"state":kind==="senate"?"race":"state";
+const unitWord=()=>kind==="senate"||kind==="gov"?"race":"state";
 
 // ---------- map ----------
 function buildMap(){
@@ -199,9 +227,9 @@ function renderMap(){
 
 // ---------- panels ----------
 function voteRows(x){
-  const rows=E.cands.map((c,i)=>{const p=x.n?100*x.v[i]/x.n:0;return `<div class="vrow">${sw(i)}<span class="vn" style="color:${sideColor(i)}">${sideName(i)}</span><span class="vbar"><i style="width:${p}%;background:${sideColor(i)}"></i></span><span class="vp num">${x.n?p.toFixed(1)+"%":"–"}</span><span class="vv num">${fmtV(x.v[i])}</span></div>`}).join("");
+  const rows=E.cands.map((c,i)=>{const p=x.n?100*x.v[i]/x.n:0;return `<div class="vrow">${sw(i)}<span class="vn" style="color:${sideColor(i)}">${sideName(i)}</span><span class="vbar"><i style="width:${p}%;background:${sideColor(i)}"></i></span><span class="vp num">${x.n?p.toFixed(1)+"%":"–"}</span><span class="vv num">${E.pctOnly?"":fmtV(x.v[i])}</span></div>`}).join("");
   const oth=x.n?100*x.oth/x.n:0;
-  return `<div class="vote">${rows}<div class="vrow muted"><i class="sw" style="background:#3a4357"></i><span class="vn">Others</span><span class="vbar"><i style="width:${oth}%;background:#3a4357"></i></span><span class="vp num">${x.n?oth.toFixed(1)+"%":"–"}</span><span class="vv num">${fmtV(x.oth)}</span></div></div>`;
+  return `<div class="vote">${rows}<div class="vrow muted"><i class="sw" style="background:#3a4357"></i><span class="vn">Others</span><span class="vbar"><i style="width:${oth}%;background:#3a4357"></i></span><span class="vp num">${x.n?oth.toFixed(1)+"%":"–"}</span><span class="vv num">${E.pctOnly?"":fmtV(x.oth)}</span></div></div>`;
 }
 function renderDetail(){
   const el=$("detail");
@@ -209,7 +237,7 @@ function renderDetail(){
   const s=units[selected],x=at(s,t),open=t<s.close,fin=stateFinal(s);
   const rivalCalled=s.rivalT!==null&&t>=s.rivalT;
   const pill=open?`<span class="pill">Polls open</span>`:s.leg?`<span class="pill done">Decided</span>`:fin?`<span class="pill done">Final</span>`:rivalCalled?`<span class="pill rival">Rival called it</span>`:`<span class="pill counting">Counting</span>`;
-  const sub=kind==="pres"?`${s.ev} electoral vote${s.ev===1?"":"s"}`:kind==="senate"?"1 Senate seat":`${s.ev} House seat${s.ev===1?"":"s"}`;
+  const sub=kind==="pres"?`${s.ev} electoral vote${s.ev===1?"":"s"}`:kind==="senate"?"1 Senate seat":kind==="gov"?"Governor":`${s.ev} House seat${s.ev===1?"":"s"}`;
   let html=`<div class="head"><div class="title">${s.name}<span>${sub} · Polls close ${fmtTime(s.close)} ET</span></div>${pill}</div>`;
   if(s.leg){
     html+=`<div class="facts">${open?`Results arrive at ${fmtTime(s.close)} ET.`:kind==="pres"?`No popular vote here: <b>the state legislature chose the electors.</b> Its electoral votes went to ${s.evs.map((v,i)=>v?`${nameHTML(i)} (${v})`:"").filter(Boolean).join(", ")}.`:`<b>Unopposed.</b> ${nameHTML(s.winner)} wins the seat.`}</div>`;
@@ -222,7 +250,7 @@ function renderDetail(){
   }else{
     const srt=x.v.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
     const lead=x.n?`${sideName(srt[0][1])} +${(100*(srt[0][0]-(srt[1]?srt[1][0]:0))/x.n).toFixed(1)}`:"no votes yet";
-    html+=voteRows(x)+`<div class="facts">${open?`Votes start coming in after polls close at <b>${fmtTime(s.close)} ET</b>.`:`<b class="num">${Math.round(x.r*100)}%</b> of expected vote in · Leader: <b>${lead}</b> · Votes left: <b class="num">~${fmtV(s.total-x.n)}</b>`}</div>`;
+    html+=voteRows(x)+`<div class="facts">${open?`Votes start coming in after polls close at <b>${fmtTime(s.close)} ET</b>.`:`<b class="num">${Math.round(x.r*100)}%</b> of expected vote in · Leader: <b>${lead}</b>${E.pctOnly?"":` · Votes left: <b class="num">~${fmtV(s.total-x.n)}</b>`}`}</div>`;
   }
   if(s.call||fin){
     let v="";
@@ -247,7 +275,7 @@ function renderDetail(){
 }
 function bigCallText(){
   if(kind==="pres")return {title:"Call the presidency",q:`Who becomes president? ${maj} electoral votes is a majority this year.`,btn:i=>`${sideName(i)} wins`};
-  if(kind==="senate")return {title:"Call the night",q:`Which color wins the most of tonight's ${E.size} Senate races?`,btn:i=>`${sideName(i)} wins most`};
+  if(kind==="senate"||kind==="gov")return {title:"Call the night",q:`Which color wins the most of tonight's ${E.size} ${kind==="gov"?"governor":"Senate"} races? A tie is possible.`,btn:i=>i<0?"Even split":`${sideName(i)} wins most`};
   return {title:"Call the House",q:"Which color wins a House majority (218 of 435 seats)?",btn:i=>`${sideName(i)} wins the House`};
 }
 function renderPres(){
@@ -258,7 +286,7 @@ function renderPres(){
     html+=`<div class="verdict">You called it for ${nameHTML(presCall.party)} at ${fmtTime(presCall.t)} with ${Math.round(presCall.r*100)}% of the vote in.${rivalDone?` Rival called it at ${fmtTime(rivalPresT)}.`:""}${ended?`<br>${presCall.party===E.winner?`<b class="g">Correct! +${presPts()} pts.</b>`:`<b class="r">Wrong. ${presPts()} pts.</b>`}`:"<br>You'll find out at the end of the night."}</div>`;
   }else{
     html+=`<p class="psub">${B.q} Worth up to 650 points if you're right and early; costs 600 if you're wrong.${rivalDone?` <b class="y">The rival network already called it at ${fmtTime(rivalPresT)}.</b>`:""}</p>
-    <div class="calls big">${E.cands.map((c,i)=>`<button data-pres="${i}" ${t<0||ended?"disabled":""} type="button" style="border-color:${sideColor(i)};color:${sideColor(i)};background:${sideColor(i)}1f">${B.btn(i)}</button>`).join("")}</div>`;
+    <div class="calls big">${E.cands.map((c,i)=>i).concat(kind==="senate"||kind==="gov"?[-1]:[]).map(i=>`<button data-pres="${i}" ${t<0||ended?"disabled":""} type="button" style="border-color:${sideColor(i)};color:${sideColor(i)};background:${sideColor(i)}1f">${B.btn(i)}</button>`).join("")}</div>`;
   }
   if(ended&&!yearGuess)html+=`<button class="primary" id="backGuess" type="button" style="width:100%;margin-top:10px">Guess the year</button>`;
   setHTML(el,html);
@@ -269,7 +297,7 @@ function renderBar(){
   $("score").textContent=liveScore().toLocaleString();
   const rv=rivalSeats(t);
   const my=kind==="house"?rv:myEV();
-  const goal=kind==="pres"?`${maj} to win`:kind==="senate"?`${E.size} races`:"218 to win";
+  const goal=kind==="pres"?`${maj} to win`:kind==="senate"||kind==="gov"?`${E.size} races`:"218 to win";
   $("evrow").innerHTML=E.cands.map((c,i)=>`<span style="color:${sideColor(i)}">${sideName(i)} ${my[i]}</span>`).join("")+`<span class="mid">${goal}</span>`;
   // first color fills from the left, second from the right, any others follow the first; a majority marker for each end
   const w=my.map(v=>100*v/E.size);let left=w[0];
@@ -277,7 +305,7 @@ function renderBar(){
     E.cands.slice(2).map((c,j)=>{const i=j+2,h=`<i style="left:${left}%;width:${w[i]}%;background:${sideColor(i)}"></i>`;left+=w[i];return h}).join("")+
     `<b class="half" style="left:${100*maj/E.size}%"></b><b class="half" style="left:${100-100*maj/E.size}%"></b>`;
   $("rival").textContent=kind==="house"?`Seats called by the rival network · Your state calls: ${units.filter(u=>u.call).length}`:"Rival network: "+E.cands.map((c,i)=>`${sideName(i)} ${rv[i]}`).join(" · ");
-  $("evlabel").textContent=kind==="pres"?"Your calls (electoral votes)":kind==="senate"?"Your calls (Senate races)":"House seats";
+  $("evlabel").textContent=kind==="pres"?"Your calls (electoral votes)":kind==="senate"?"Your calls (Senate races)":kind==="gov"?"Your calls (governor races)":"House seats";
   const lv=$("live");lv.textContent=ended?"Final":running?"Live":"Paused";lv.classList.toggle("on",running);
   $("play").textContent=ended?"Done":running?"Pause":"Start";
   $("kindtag").textContent=KIND_LABEL[kind];
@@ -293,7 +321,7 @@ function frame(ts){
     const closing=[...new Set(units.filter(s=>prev<s.close&&t>=s.close).map(s=>s.a))];
     if(closing.length)chyron(`<b>${fmtTime(units.find(s=>s.a===closing[0]).close)} ET</b> Polls closed: ${closing.join(", ")}`);
     units.forEach((s,i)=>{if(s.rivalT!==null&&t>=s.rivalT&&!seenRival.has(i)){seenRival.add(i);if(!closing.length&&!s.leg)chyron(`<b>RIVAL NETWORK</b> projects ${s.name} for ${sideName(s.winner)}${s.districts&&s.winner<0?"":""}.`)}});
-    if(rivalPresT!==null&&prev<rivalPresT&&t>=rivalPresT)chyron(`<b>RIVAL NETWORK PROJECTS: ${sideName(E.winner).toUpperCase()} ${kind==="pres"?"WINS THE PRESIDENCY":kind==="senate"?"WINS THE MOST SENATE RACES":"WINS THE HOUSE"}</b>`);
+    if(rivalPresT!==null&&prev<rivalPresT&&t>=rivalPresT)chyron(E.winner<0?`<b>RIVAL NETWORK: TONIGHT ENDS IN AN EVEN SPLIT</b>`:`<b>RIVAL NETWORK PROJECTS: ${sideName(E.winner).toUpperCase()} ${kind==="pres"?"WINS THE PRESIDENCY":kind==="house"?"WINS THE HOUSE":"WINS THE MOST RACES"}</b>`);
     if(t>=END){endNight();return}
     renderAll();
   }
@@ -338,6 +366,14 @@ function revealBody(){
       <details><summary>All ${E.size} winners</summary><div class="wlist">${units.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(u=>`<div>${sw(u.winner)}<b>${u.name}</b> · ${u.who}${u.unopp?" (unopposed)":""}</div>`).join("")}</div></details>
       <p class="muted" style="font-size:12.5px">"Winner" means most votes on election night. Runoffs held later are noted above.</p>`;
   }
+  if(kind==="gov"){
+    const notes=units.filter(u=>u.note);
+    return `<div class="who">${who}. ${E.winner<0?"<b>The night ended in an even split.</b>":`<b>${E.cands[E.winner].name}</b> won the most races.`}</div>
+      <table class="num">${E.cands.map((c,i)=>`<tr><td>${sw(i)}${c.name}</td><td>${c.ev} race${c.ev===1?"":"s"} won</td></tr>`).join("")}</table>
+      ${notes.length?`<p style="font-size:13.5px">${notes.map(u=>`<b>${u.name}:</b> ${u.note}`).join("<br>")}</p>`:""}
+      <details><summary>All ${E.size} winners</summary><div class="wlist">${units.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(u=>`<div>${sw(u.winner)}<b>${u.name}</b> · ${u.who} beat ${u.runner}</div>`).join("")}</div></details>
+      <p class="muted" style="font-size:12.5px">Governor results are shares of the vote (no raw counts), from Wikipedia's yearly results tables.</p>`;
+  }
   const yi=CONGRESS.house.findIndex(y=>y.year===E.year),prev=yi>0?CONGRESS.house[yi-1]:null;
   let change="";
   if(prev){const ps=[0,0,0];Object.values(prev.states).forEach(ds=>ds.forEach(d=>ps[d[3]]++));const d=E.cands[1].ev-ps[1];change=`<p style="font-size:14px">Compared with ${prev.year}, Republicans ${d>=0?"gained":"lost"} ${Math.abs(d)} seat${Math.abs(d)===1?"":"s"} and Democrats ${E.cands[0].ev-ps[0]>=0?"gained":"lost"} ${Math.abs(E.cands[0].ev-ps[0])}.</p>`}
@@ -359,7 +395,7 @@ function reveal(){
     </div>
     <div><div class="big num">${total.toLocaleString()}</div><div class="rank">${rank}</div><div class="muted" style="font-size:12.5px">Top possible this night: ${maxScore().toLocaleString()}</div></div>
     <table>
-      <tr><td>${kind==="senate"?"Race":"State"} calls<br><span class="muted">${right} right, ${wrong} wrong</span></td><td class="${statePtsSum<0?"r":"g"}">${statePtsSum}</td></tr>
+      <tr><td>${kind==="senate"||kind==="gov"?"Race":"State"} calls<br><span class="muted">${right} right, ${wrong} wrong</span></td><td class="${statePtsSum<0?"r":"g"}">${statePtsSum}</td></tr>
       <tr><td>${bigCallText().title}<br><span class="muted">${presCall?`${sideName(presCall.party)} at ${fmtTime(presCall.t)} ET`:"No call"}</span></td><td class="${presPts()<0?"r":presPts()>0?"g":"muted"}">${presPts()}</td></tr>
       <tr><td>Year guess</td><td class="${gotYear?"g":"muted"}">${gotYear?250:0}</td></tr>
     </table>
@@ -368,7 +404,7 @@ function reveal(){
       <button class="ghost" id="again" type="button">Play another ${KIND_LABEL[kind].toLowerCase()} election</button>
       <button class="ghost" id="close" type="button">Look at the final map</button>
     </div>
-    <p class="muted" id="copied" style="font-size:12.5px">${kind!=="pres"?"Results: MIT Election Data and Science Lab.":E.year>=1976?"Results: MIT Election Data and Science Lab via Noah Veltman (1976–2020); 2024 summed from county results compiled by Tony McGovern.":"Results: Wikipedia state-by-state tables (which cite Dave Leip's Atlas and CQ's Guide to U.S. Elections), checked against official electoral vote totals."} Vote counting order is simulated; final results are real.</p>`;
+    <p class="muted" id="copied" style="font-size:12.5px">${kind==="gov"?"Results: Wikipedia's yearly gubernatorial results tables, checked against an independent list of known winners.":kind!=="pres"?"Results: MIT Election Data and Science Lab.":E.year>=1976?"Results: MIT Election Data and Science Lab via Noah Veltman (1976–2020); 2024 summed from county results compiled by Tony McGovern.":"Results: Wikipedia state-by-state tables (which cite Dave Leip's Atlas and CQ's Guide to U.S. Elections), checked against official electoral vote totals."} Vote counting order is simulated; final results are real.</p>`;
   $("copy").onclick=async()=>{try{await navigator.clipboard.writeText(share);$("copied").textContent="Copied. Send it to your partner."}catch(e){$("copied").textContent="Couldn't copy here. Your score: "+total}};
   $("again").onclick=()=>{$("end").hidden=true;startRandom(era)};
   $("close").onclick=()=>{$("end").hidden=true};
@@ -383,8 +419,8 @@ const today=new Date(),dkey=today.getFullYear()+"-"+(today.getMonth()+1)+"-"+tod
 function startDaily(){era="all";start("pres",hashStr("men-"+dkey)%ELECTIONS.length,"daily-"+dkey,"Mystery of "+today.toLocaleDateString(undefined,{month:"short",day:"numeric"}))}
 function startRandom(which){
   era=which||"all";
-  const k=era==="senate"||era==="house"?era:"pres";
-  const list=k==="pres"?ELECTIONS:CONGRESS[k];
+  const k=era==="senate"||era==="house"||era==="gov"?era:"pres";
+  const list=k==="pres"?ELECTIONS:k==="gov"?GOV:CONGRESS[k];
   let pool=list.map((e,i)=>i).filter(i=>k!=="pres"||era==="all"||(era==="old"?list[i].year<1976:list[i].year>=1976));
   try{const pl=JSON.parse(localStorage.getItem("men-played-"+k)||(k==="pres"?localStorage.getItem("men-played"):null)||"[]");const un=pool.filter(i=>!pl.includes(list[i].year));if(un.length)pool=un}catch(e){}
   start(k,pool[Math.floor(Math.random()*pool.length)],"r-"+Date.now(),"Random mystery");

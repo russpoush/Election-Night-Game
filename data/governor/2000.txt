@@ -1,0 +1,11 @@
+DE|-|Minner|D|59.2|Burris|R|39.7
+IN|-|O'Bannon|D|56.6|McIntosh|R|41.7
+MO|-|Holden|D|49.1|Talent|R|48.2
+MT|-|Martz|R|51.0|O'Keefe|D|47.1
+NH|-|Shaheen|D|48.7|Humphrey|R|43.7
+NC|-|Easley|D|52.0|Vinroot|R|46.3
+ND|-|Hoeven|R|55.0|Heitkamp|D|45.0
+UT|-|Leavitt|R|55.8|Orton|D|42.3
+VT|-|Dean|D|50.5|Dwyer|R|38.0
+WA|-|Locke|D|58.4|Carlson|R|39.7
+WV|-|Wise|D|50.1|Underwood|R|47.2

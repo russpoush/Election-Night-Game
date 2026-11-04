@@ -1,0 +1,14 @@
+AR|-|Pryor|D|83.24|Griffith|R|16.74
+DE|-|du Pont|R|56.86|Tribbitt|D|42.46
+IL|-|Thompson|R|64.68|Howlett|D|34.71
+IN|-|Bowen|R|56.85|Conrad|D|42.63
+MO|-|Teasdale|D|50.23|Bond|R|49.55
+MT|-|Judge|D|61.7|Woodahl|R|36.58
+NH|-|Thomson|R|57.66|Spanos|D|42.32
+NC|-|Hunt|D|64.99|Flaherty|R|33.9
+ND|-|Link|D|51.58|Elkin|R|46.53
+RI|-|Garrahy|D|54.82|Taft|R|44.71
+UT|-|Matheson|D|52.02|Romney|R|45.96
+VT|-|Snelling|R|53.39|Hackel|D|40.48
+WA|-|Ray|D|53.14|Spellman|R|44.43
+WV|-|Rockefeller|D|66.15|Underwood|R|33.82

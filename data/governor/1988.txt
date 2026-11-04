@@ -1,0 +1,12 @@
+DE|-|Castle|R|70.7|Kreshtool|D|29.3
+IN|-|Bayh|D|53.2|Mutz|R|46.8
+MO|-|Ashcroft|R|64.2|Hearnes|D|34.8
+MT|-|Stephens|R|51.9|Judge|D|46.1
+NH|-|Gregg|R|60.4|McEachern|D|39.0
+NC|-|Martin|R|56.1|Jordan|D|43.9
+ND|-|Sinner|D|59.9|Mallberg|R|40.1
+RI|-|DiPrete|R|50.8|Sundlun|D|49.2
+UT|-|Bangerter|R|40.1|Wilson|D|38.4
+VT|-|Kunin|D|55.3|Bernhardt|R|43.3
+WA|-|Gardner|D|62.2|Williams|R|37.8
+WV|-|Caperton|D|58.9|Moore|R|41.1
