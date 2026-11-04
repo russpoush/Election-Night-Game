@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Election Night Games</title>
+<meta name="description" content="Run the decision desk on election night: call races before the rival network, and replay real U.S. elections from 1824 to 2024.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a broadcast "programme guide" — one column of two big game cards. Single dark studio theme, matching the games. */
+:root{
+  --bg:#0b0f17; --panel:#141a26; --line:#252e40; --text:#e9edf5; --muted:#8b95a9;
+  --org:#ff8a3d; --pur:#a57cff; --call:#ffd23f; --bad:#ff5a5f;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body)}
+main{max-width:600px;margin:0 auto;padding:32px 16px 48px;display:grid;gap:18px}
+.live{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.08em;padding:3px 7px;border-radius:3px;background:var(--bad);color:#fff;text-transform:uppercase}
+h1{font-family:var(--display);font-weight:800;font-size:44px;line-height:.95;text-transform:uppercase;letter-spacing:.02em;margin:10px 0 8px;text-wrap:balance}
+.lede{color:var(--muted);font-size:16px;line-height:1.5;margin:0}
+.card{display:grid;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;text-decoration:none;color:inherit;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+.card.a::before{background:linear-gradient(var(--org),var(--pur))}
+.card.b::before{background:var(--call)}
+.card:hover,.card:focus-visible{border-color:var(--call);outline:none}
+.card h2{font-family:var(--display);font-weight:800;font-size:30px;text-transform:uppercase;margin:0;letter-spacing:.02em}
+.card p{margin:0;line-height:1.5;font-size:15px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{font-size:12px;font-weight:600;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.go{font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:.05em;text-transform:uppercase;color:var(--call)}
+footer{color:var(--muted);font-size:12.5px;line-height:1.5}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="live">Live</span>
+    <h1>Election Night Games</h1>
+    <p class="lede">You run the decision desk. Call races before the rival network does, and don't call one wrong.</p>
+  </header>
+
+  <a class="card b" href="mystery-election-night/">
+    <h2>Mystery Election Night</h2>
+    <p>Replay a real election night without knowing the year. The candidates are disguised as colors. Call the states, call the winner, then guess the year.</p>
+    <div class="tags"><span>President 1824–2024</span><span>Senate 1976–2020</span><span>House 1976–2022</span><span>Governor 1976–2024</span></div>
+    <span class="go">Play →</span>
+  </a>
+
+  <a class="card a" href="decision-desk/">
+    <h2>Decision Desk</h2>
+    <p>Eight made-up races with fake votes pouring in. Big cities report late and mail ballots swing hard, so the safe-looking race isn't always safe.</p>
+    <div class="tags"><span>3-minute nights</span><span>Same races for everyone each day</span></div>
+    <span class="go">Play →</span>
+  </a>
+
+  <footer>Real results from the MIT Election Data and Science Lab, Wikipedia's state-by-state tables and county results compiled by Tony McGovern; vote-counting order is simulated. <a href="https://github.com/russpoush/Election-Night-Game">Sources, checks and code on GitHub</a>.</footer>
+</main>
+</body>
+</html>
